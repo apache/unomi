@@ -2507,14 +2507,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 Query tenantScopedQuery = wrapWithTenantAndItemTypeQuery(itemType, Query.of(q -> q.matchAll(m -> m)), finalTenantId);
 
-                // Optimized: put the optional condition in the query and skip the slow global aggregation.
-                // Non-optimized: keep a filter aggregation for _filtered, but always scope the query to the
-                // current tenant. A global aggregation ignores the query and would count every tenant's documents.
-                // Also register aggregations under stable names ("filter", "buckets", "missing"): the previous
-                // code used String.valueOf(Kind) ("Global") while reading Kind.jsonValue() ("global"), so POST
-                // aggregates with a condition returned nothing (UNOMI-1014).
-                // _filtered (optimized) and _all (non-optimized) come from hits.total, which stops at 10,000
-                // unless hits are counted exactly. Aggregations visit every matching document anyway.
+                // Optimized: the optional condition goes into the query, so _filtered is the hit count.
+                // Non-optimized: the query is the whole tenant (_all is the hit count) and a filter aggregation
+                // gives _filtered. Never use a global aggregation: it ignores the query and counts every tenant.
+                // hits.total stops at 10,000 unless hits are counted exactly; aggregations visit every matching
+                // document anyway, so exact counting costs little.
                 searchSourceBuilder.trackTotalHits(t -> t.enabled(true));
                 if (optimizedQuery) {
                     if (filter != null) {

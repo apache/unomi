@@ -462,6 +462,12 @@ public class PersistenceServiceIT extends BaseIT {
             Map<String, Long> byLastName = persistenceService.aggregateWithOptimizedQuery(matches,
                     new TermsAggregate("properties.lastName"), Profile.ITEM_TYPE, 1);
             Assert.assertEquals(Long.valueOf(count), byLastName.get("_filtered"));
+
+            // The non-optimized path counts the tenant (_all) and the matches (_filtered) exactly too
+            Map<String, Long> nonOptimized = persistenceService.aggregateQuery(matches,
+                    new TermsAggregate("properties.lastName"), Profile.ITEM_TYPE);
+            Assert.assertEquals(Long.valueOf(count), nonOptimized.get("_filtered"));
+            Assert.assertEquals(Long.valueOf(persistenceService.getAllItemsCount(Profile.ITEM_TYPE)), nonOptimized.get("_all"));
         } finally {
             persistenceService.removeByQuery(matches, Profile.class);
             refreshPersistence(Profile.class);

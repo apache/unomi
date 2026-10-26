@@ -677,7 +677,8 @@ public interface PersistenceService {
     /**
      * Aggregates item counts for the given type, optionally filtered by condition and
      * aggregated according to the specified {@link BaseAggregate}.
-     * This aggregate won't return the {@code _all} count and should therefore be much faster than {@link #aggregateQuery(Condition, BaseAggregate, String)}
+     * Unlike {@link #aggregateQuery(Condition, BaseAggregate, String)}, it does not return the {@code _all} count, which saves
+     * counting every item of the type.
      *
      * @param filter    the condition the items must match or {@code null} if no filtering is needed
      * @param aggregate an aggregate specifying how matching items must be bundled

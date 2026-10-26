@@ -2505,15 +2505,11 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     }
                 }
 
-                // Optimized: put the optional condition in the query and skip the slow global aggregation.
-                // Non-optimized: keep a filter aggregation for _filtered, scoped to the current tenant.
-                // Register aggregations under stable names ("filter", "buckets", "missing"). The previous
-                // non-optimized path stored the global aggregation as "buckets" while reading "global", and
-                // nested the condition filter under "buckets" while reading "filter", so POST aggregates with
-                // a condition returned nothing (UNOMI-1014). A global aggregation also ignores the query and
-                // would count every tenant's documents.
-                // _filtered (optimized) and _all (non-optimized) come from hits.total, which stops at 10,000
-                // unless hits are counted exactly. Aggregations visit every matching document anyway.
+                // Optimized: the optional condition goes into the query, so _filtered is the hit count.
+                // Non-optimized: the query is the whole tenant (_all is the hit count) and a filter aggregation
+                // gives _filtered. Never use a global aggregation: it ignores the query and counts every tenant.
+                // hits.total stops at 10,000 unless hits are counted exactly; aggregations visit every matching
+                // document anyway, so exact counting costs little.
                 searchRequestBuilder.trackTotalHits(t -> t.enabled(true));
                 if (optimizedQuery) {
                     if (filter != null) {
