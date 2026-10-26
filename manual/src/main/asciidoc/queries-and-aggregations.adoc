@@ -200,6 +200,25 @@ The above request will produce a similar that looks like this:
 
 You can see that we retrieve the count of newcomers aggregated by day.
 
+The `interval` parameter accepts the following values, in short or named form. It defaults to a month (`1M`).
+
+[cols="1,1"]
+|===
+| Short form | Named form
+
+| `1s` | `Second`
+| `1m` | `Minute`
+| `1h` | `Hour`
+| `1d` | `Day`
+| `1w` | `Week`
+| `1M` | `Month`
+| `1q` | `Quarter`
+| `1y` | `Year`
+|===
+
+Other values, such as `2d` or `day`, are not supported. The optional `format` parameter sets how the date of each
+bucket is written in the result keys, as in the `yyyy-MM-dd` keys above.
+
 ===== Date range
 
 Date ranges make it possible to "bucket" dates, for example to regroup profiles by their birth date as in the example
@@ -272,6 +291,9 @@ The resulting JSON response will look something like this:
     "_missing":517
 }
 ----
+
+Each range includes its `from` date and excludes its `to` date. Leave `from` or `to` empty (`null`) for a range that is
+open on that side.
 
 You can find more information about the date range formats here:
 - Elasticsearch documentation: https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-daterange-aggregation.html[Date range aggregation (Elasticsearch current)]
@@ -351,6 +373,91 @@ This will produce an output that looks like this:
     "Greater than 100":0
 }
 ----
+
+As for date ranges, each range includes its `from` value and excludes its `to` value, and `null` leaves a side open.
+Ranges may overlap: a value is counted in every range it falls in.
+
+===== IP range
+
+IP ranges make it possible to "bucket" IP addresses, for example to tell internal visitors from external ones. The
+property must be mapped as an `ip` field in the search engine; no property is mapped that way by default, so this
+aggregation is meant for properties you map yourself. IPv4 and IPv6 addresses are both supported.
+
+Here's an example that groups sessions by a custom `properties.remoteIp` property:
+
+[source,shell script]
+----
+curl -X POST http://localhost:8181/cxs/query/session/properties.remoteIp \
+--user "TENANT_ID:PRIVATE_KEY" \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+  "aggregate": {
+    "property": "properties.remoteIp",
+    "type": "ipRange",
+    "ipRanges": [
+      {
+        "key": "Internal",
+        "from": "10.0.0.0",
+        "to": "11.0.0.0"
+      },
+      {
+        "key": "Loopback",
+        "from": "127.0.0.0",
+        "to": "128.0.0.0"
+      },
+      {
+        "from": "192.168.0.0",
+        "to": "192.169.0.0"
+      }
+    ]
+  },
+  "condition": {
+    "type": "matchAllCondition",
+    "parameterValues": {}
+  }
+}
+EOF
+----
+
+This will produce an output that looks like this:
+
+[source,json]
+----
+{
+    "_all":2310,
+    "_filtered":2310,
+    "Internal":1207,
+    "Loopback":12,
+    "192.168.0.0-192.169.0.0":340,
+    "_missing":64
+}
+----
+
+As for the other ranges, `from` is included and `to` is excluded. A range without a `key` is reported under its bounds,
+as for the last range above.
+
+==== Reading the results
+
+The result of an aggregate query is a JSON object that maps each bucket key to the number of items in that bucket. A
+few keys starting with an underscore hold counts of their own:
+
+`_all`:: The number of items of the requested type in the current tenant. It is only returned by a `POST` aggregate
+query that does not set `optimizedQuery=true`, since counting every item takes extra time.
+`_filtered`:: The number of items that match the condition.
+`_missing`:: The number of matching items that have no value for the aggregated property. It is only returned when there
+are such items.
+
+The bucket keys depend on the aggregation type:
+
+* For a plain property aggregation (no `aggregate` type), the keys are the property values.
+* For a date aggregation, the keys are the dates of the buckets, written with the `format` parameter when it is set.
+  Periods with no items between the first and the last bucket are included, with a count of `0`.
+* For a range aggregation, the keys are the `key` of each range. A range without a `key` is reported as `from-to`, with
+  `*` for an open side, for example `*-5.0` or `100.0-*`. Every range is reported, even with a count of `0`.
+
+A bucket whose key would be `_all`, `_filtered` or `_missing` is left out of the results so that it cannot change those
+counts.
 
 === Scroll Queries
 
