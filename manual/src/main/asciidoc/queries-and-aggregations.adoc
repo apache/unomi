@@ -292,8 +292,8 @@ The resulting JSON response will look something like this:
 }
 ----
 
-Each range includes its `from` date and excludes its `to` date. Leave `from` or `to` empty (`null`) for a range that is
-open on that side.
+Each range includes its `from` date and excludes its `to` date. Set `from` or `to` to `null` for a range that is open on
+that side. The same rules apply to numeric and IP ranges.
 
 You can find more information about the date range formats here:
 - Elasticsearch documentation: https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-daterange-aggregation.html[Date range aggregation (Elasticsearch current)]
@@ -374,14 +374,13 @@ This will produce an output that looks like this:
 }
 ----
 
-As for date ranges, each range includes its `from` value and excludes its `to` value, and `null` leaves a side open.
 Ranges may overlap: a value is counted in every range it falls in.
 
 ===== IP range
 
-IP ranges make it possible to "bucket" IP addresses, for example to tell internal visitors from external ones. The
-property must be mapped as an `ip` field in the search engine; no property is mapped that way by default, so this
-aggregation is meant for properties you map yourself. IPv4 and IPv6 addresses are both supported.
+IP ranges make it possible to "bucket" IP addresses, for example to tell internal visitors from external ones. IPv4 and
+IPv6 addresses are both supported. The property must be mapped as an `ip` field in the search engine before its data
+is indexed. No property is mapped that way by default, so add that mapping yourself for the property you aggregate on.
 
 Here's an example that groups sessions by a custom `properties.remoteIp` property:
 
@@ -434,30 +433,31 @@ This will produce an output that looks like this:
 }
 ----
 
-As for the other ranges, `from` is included and `to` is excluded. A range without a `key` is reported under its bounds,
-as for the last range above.
+A range without a `key` is reported as `from-to`, as for the last range above.
 
 ==== Reading the results
 
 The result of an aggregate query is a JSON object that maps each bucket key to the number of items in that bucket. A
 few keys starting with an underscore hold counts of their own:
 
-`_all`:: The number of items of the requested type in the current tenant. It is only returned by a `POST` aggregate
-query that does not set `optimizedQuery=true`, since counting every item takes extra time.
-`_filtered`:: The number of items that match the condition.
+`_all`:: The number of items of the requested type in the current tenant. Counting every item takes extra time, so it
+is not returned when the `optimizedQuery=true` query parameter is set (as in
+`POST /cxs/query/profile/properties.nbOfVisits?optimizedQuery=true`), nor for `GET` aggregate queries.
+`_filtered`:: The number of items that match the condition. Without `optimizedQuery=true`, it is only returned when the
+request has a condition.
 `_missing`:: The number of matching items that have no value for the aggregated property. It is only returned when there
 are such items.
 
 The bucket keys depend on the aggregation type:
 
-* For a plain property aggregation (no `aggregate` type), the keys are the property values.
+* When the request has no `aggregate`, or one without a `type`, the keys are the values of the property.
 * For a date aggregation, the keys are the dates of the buckets, written with the `format` parameter when it is set.
   Periods with no items between the first and the last bucket are included, with a count of `0`.
 * For a range aggregation, the keys are the `key` of each range. A range without a `key` is reported as `from-to`, with
   `*` for an open side, for example `*-5.0` or `100.0-*`. Every range is reported, even with a count of `0`.
 
-A bucket whose key would be `_all`, `_filtered` or `_missing` is left out of the results so that it cannot change those
-counts.
+A bucket whose key is `_all`, `_filtered` or `_missing` is dropped, because those keys are reserved for the counts
+above.
 
 === Scroll Queries
 
