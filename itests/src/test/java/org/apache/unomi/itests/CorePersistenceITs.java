@@ -42,6 +42,7 @@ import org.junit.runners.Suite.SuiteClasses;
         Migrate40IndexMappingIT.class,
         Migrate40TenantAssignmentIT.class,
         PersistenceServiceIT.class,
+        AggregateQueryIT.class,
         BasicIT.class,
         ConditionEvaluatorIT.class,
         ConditionQueryBuilderIT.class,

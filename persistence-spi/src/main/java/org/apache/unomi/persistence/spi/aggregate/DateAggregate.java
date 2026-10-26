@@ -45,6 +45,9 @@ public class DateAggregate extends BaseAggregate {
 
     private static final Map<String, String> NEW_TO_OLD_FORMAT = createReverseMap();
 
+    private static final String SUPPORTED_INTERVALS =
+            "1s, 1m, 1h, 1d, 1w, 1M, 1q, 1y, Second, Minute, Hour, Day, Week, Month, Quarter, Year";
+
     private static Map<String, String> createReverseMap() {
         Map<String, String> reverseMap = new HashMap<>();
         for (Map.Entry<String, String> entry : DateAggregate.OLD_TO_NEW_FORMAT.entrySet()) {
@@ -90,10 +93,19 @@ public class DateAggregate extends BaseAggregate {
     /**
      * Sets the interval; falls back to default when null/empty.
      *
-     * @param interval the interval, in old or new format
+     * @param interval the interval, in old (e.g. {@code 1d}) or new (e.g. {@code Day}) format
+     * @throws IllegalArgumentException if the interval is neither: the search engines cannot run it
      */
     public void setInterval(String interval) {
-        this.interval = (interval != null && !interval.isEmpty()) ? interval : DEFAULT_INTERVAL;
+        if (interval == null || interval.isEmpty()) {
+            this.interval = DEFAULT_INTERVAL;
+            return;
+        }
+        if (!isOldFormat(interval) && !isNewFormat(interval)) {
+            throw new IllegalArgumentException(
+                    "Unsupported date aggregate interval '" + interval + "', use one of: " + SUPPORTED_INTERVALS);
+        }
+        this.interval = interval;
     }
 
     /**
