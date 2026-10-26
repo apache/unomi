@@ -20,7 +20,12 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.query.DateRange;
+import org.apache.unomi.api.query.NumericRange;
 import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.persistence.spi.aggregate.DateAggregate;
+import org.apache.unomi.persistence.spi.aggregate.DateRangeAggregate;
+import org.apache.unomi.persistence.spi.aggregate.NumericRangeAggregate;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.junit.After;
 import org.junit.Assert;
@@ -30,7 +35,9 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -312,7 +319,7 @@ public class PersistenceServiceIT extends BaseIT {
             Assert.assertEquals(7.0, metrics.get("_sum"), 0.001);
             Assert.assertEquals(1.0, metrics.get("_count"), 0.001);
 
-            // Non-optimized path without a condition: this is where the global aggregation used to count every tenant.
+            // Without a condition the non-optimized aggregate must still only count the current tenant.
             Map<String, Long> termsNonOptimizedNoCondition = keepTrying(
                     "Non-optimized terms aggregate without a condition should only count the current tenant",
                     () -> persistenceService.aggregateQuery(null, byFirstName, Profile.ITEM_TYPE),
@@ -332,6 +339,16 @@ public class PersistenceServiceIT extends BaseIT {
                     DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
             Assert.assertEquals(7.0, metricsNoCondition.get("_sum"), 0.001);
             Assert.assertEquals(1.0, metricsNoCondition.get("_count"), 0.001);
+
+            Map<String, Long> otherTenantTerms = keepTrying(
+                    "The other tenant's _all should only count its own profiles",
+                    () -> executionContextManager.executeAsTenant(otherTenant.getItemId(),
+                            () -> persistenceService.aggregateQuery(null, byFirstName, Profile.ITEM_TYPE)),
+                    r -> r != null && Long.valueOf(2L).equals(r.get("_all")),
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+            Assert.assertEquals(Long.valueOf(2L), otherTenantTerms.get("_all"));
+            Assert.assertEquals(Long.valueOf(1L), otherTenantTerms.get("Alice"));
+            Assert.assertEquals(Long.valueOf(1L), otherTenantTerms.get("Bob"));
         } finally {
             try {
                 executionContextManager.executeAsTenant(otherTenant.getItemId(), () -> {
@@ -344,8 +361,127 @@ public class PersistenceServiceIT extends BaseIT {
         }
     }
 
+    /**
+     * Date histogram, numeric terms, numeric range and date range aggregates must return their buckets on both engines.
+     */
+    @Test
+    public void testDateAndRangeAggregatesReturnBuckets() throws InterruptedException {
+        String marker = "agg-buckets-" + UUID.randomUUID();
+        saveProfileWithVisitAndAge(marker, "2020-01-01T10:00:00Z", 10);
+        saveProfileWithVisitAndAge(marker, "2020-01-01T11:00:00Z", 30);
+        saveProfileWithVisitAndAge(marker, "2020-01-01T12:00:00Z", 40);
+        saveProfileWithVisitAndAge(marker, "2020-01-03T10:00:00Z", 70);
+        refreshPersistence(Profile.class);
+        Condition onlyTheseProfiles = firstNameEquals(marker);
+
+        // "1d" is the legacy interval format; both engines must accept it
+        Map<String, Long> byDay = keepTrying("Date histogram should return one bucket per day",
+                () -> persistenceService.aggregateWithOptimizedQuery(onlyTheseProfiles,
+                        new DateAggregate("properties.lastVisit", "1d", "yyyy-MM-dd"), Profile.ITEM_TYPE),
+                r -> r != null && Long.valueOf(3L).equals(r.get("2020-01-01")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        Assert.assertEquals(Long.valueOf(3L), byDay.get("2020-01-01"));
+        Assert.assertEquals(Long.valueOf(0L), byDay.get("2020-01-02"));
+        Assert.assertEquals(Long.valueOf(1L), byDay.get("2020-01-03"));
+
+        Map<String, Long> byAgeValue = keepTrying("Terms aggregate on a numeric field should key buckets by value",
+                () -> persistenceService.aggregateWithOptimizedQuery(onlyTheseProfiles, new TermsAggregate(AGE_PROPERTY),
+                        Profile.ITEM_TYPE),
+                r -> r != null && Long.valueOf(1L).equals(r.get("70")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        for (String age : new String[]{"10", "30", "40", "70"}) {
+            Assert.assertEquals("Bucket for age " + age, Long.valueOf(1L), byAgeValue.get(age));
+        }
+        Assert.assertFalse("No bucket may have a null key", byAgeValue.containsKey(null));
+
+        Map<String, Long> byAge = keepTrying("Numeric range aggregate should return one bucket per range",
+                () -> persistenceService.aggregateQuery(onlyTheseProfiles, new NumericRangeAggregate(AGE_PROPERTY,
+                        Arrays.asList(numericRange("young", null, 18.0), numericRange("adult", 18.0, 65.0),
+                                numericRange("senior", 65.0, null), numericRange("all", null, null))), Profile.ITEM_TYPE),
+                r -> r != null && Long.valueOf(2L).equals(r.get("adult")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        Assert.assertEquals(Long.valueOf(1L), byAge.get("young"));
+        Assert.assertEquals(Long.valueOf(2L), byAge.get("adult"));
+        Assert.assertEquals(Long.valueOf(1L), byAge.get("senior"));
+        Assert.assertEquals("A range without bounds covers every profile", Long.valueOf(4L), byAge.get("all"));
+        Assert.assertEquals(Long.valueOf(4L), byAge.get("_filtered"));
+
+        // One range has no lower bound and the other no upper bound; both engines must accept them
+        Map<String, Long> byVisit = keepTrying("Date range aggregate should return one bucket per range",
+                () -> persistenceService.aggregateWithOptimizedQuery(onlyTheseProfiles, new DateRangeAggregate(
+                        "properties.lastVisit", "yyyy-MM-dd", Arrays.asList(dateRange("before", null, "2020-01-02"),
+                        dateRange("after", "2020-01-02", null))), Profile.ITEM_TYPE),
+                r -> r != null && Long.valueOf(3L).equals(r.get("before")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        Assert.assertEquals(Long.valueOf(3L), byVisit.get("before"));
+        Assert.assertEquals(Long.valueOf(1L), byVisit.get("after"));
+    }
+
+    /**
+     * A bucket whose key is the name of a result count must not change that count.
+     */
+    @Test
+    public void testBucketNamedLikeAResultCountLeavesItUnchanged() throws InterruptedException {
+        String marker = "agg-result-key-" + UUID.randomUUID();
+        saveProfileWithLastName(marker, "_all");
+        saveProfileWithLastName(marker, "Smith");
+        refreshPersistence(Profile.class);
+
+        Map<String, Long> byLastName = keepTrying("Terms aggregate should return the regular last-name bucket",
+                () -> persistenceService.aggregateQuery(firstNameEquals(marker), new TermsAggregate("properties.lastName"),
+                        Profile.ITEM_TYPE),
+                r -> r != null && Long.valueOf(1L).equals(r.get("Smith")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        Assert.assertEquals("_all must still be the current tenant's profile count",
+                Long.valueOf(persistenceService.getAllItemsCount(Profile.ITEM_TYPE)), byLastName.get("_all"));
+        Assert.assertEquals(Long.valueOf(2L), byLastName.get("_filtered"));
+    }
+
     private Condition matchAllCondition() {
         return new Condition(definitionsService.getConditionType("matchAllCondition"));
+    }
+
+    private Condition firstNameEquals(String firstName) {
+        Condition condition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        condition.setParameter("propertyName", "properties.firstName");
+        condition.setParameter("comparisonOperator", "equals");
+        condition.setParameter("propertyValue", firstName);
+        return condition;
+    }
+
+    private void saveProfileWithLastName(String firstName, String lastName) {
+        String itemId = "agg-result-key-" + UUID.randomUUID();
+        Profile profile = new Profile(itemId);
+        profile.setProperty("firstName", firstName);
+        profile.setProperty("lastName", lastName);
+        persistenceService.save(profile);
+        profileIds.add(itemId);
+    }
+
+    private void saveProfileWithVisitAndAge(String firstName, String lastVisit, int age) {
+        String itemId = "agg-buckets-" + UUID.randomUUID();
+        Profile profile = new Profile(itemId);
+        profile.setProperty("firstName", firstName);
+        profile.setProperty("lastVisit", Date.from(Instant.parse(lastVisit)));
+        profile.setProperty("age", age);
+        persistenceService.save(profile);
+        profileIds.add(itemId);
+    }
+
+    private static NumericRange numericRange(String key, Double from, Double to) {
+        NumericRange range = new NumericRange();
+        range.setKey(key);
+        range.setFrom(from);
+        range.setTo(to);
+        return range;
+    }
+
+    private static DateRange dateRange(String key, String from, String to) {
+        DateRange range = new DateRange();
+        range.setKey(key);
+        range.setFrom(from);
+        range.setTo(to);
+        return range;
     }
 
     private void saveProfileWithFirstName(String itemId, String firstName) {

@@ -102,6 +102,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
+import static org.apache.unomi.persistence.spi.aggregate.AggregateBuckets.addBucket;
+import static org.apache.unomi.persistence.spi.aggregate.AggregateBuckets.bucketKey;
+import static org.apache.unomi.persistence.spi.aggregate.AggregateBuckets.ipRangeBucketKey;
+import static org.apache.unomi.persistence.spi.aggregate.AggregateBuckets.rangeBucketKey;
 
 @SuppressWarnings("rawtypes")
 public class ElasticSearchPersistenceServiceImpl implements PersistenceService, SynchronousBundleListener, ManagedService {
@@ -2468,7 +2472,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         List<IpRangeAggregationRange> ranges = new ArrayList<>();
                         for (IpRange range : ipRangeAggregate.getRanges()) {
                             if (range != null) {
-                                IpRangeAggregationRange.of(builder -> builder.from(range.getFrom()).to(range.getTo()));
                                 ranges.add(IpRangeAggregationRange.of(builder -> builder.from(range.getFrom()).to(range.getTo())));
                             }
                         }
@@ -2572,46 +2575,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             aggregations = filterAggregate.aggregations();
                         }
                     }
-                    if (aggregations.get("buckets") != null) {
-                        if (aggQueryThrowOnMissingDocs) {
-                            Aggregate agg = aggregations.get("buckets");
-                            if (agg.isSterms()) {
-                                StringTermsAggregate terms = aggregations.get("buckets").sterms();
-                                if (terms.docCountErrorUpperBound() > 0 || terms.sumOtherDocCount() > 0) {
-                                    throw new UnsupportedOperationException("Some docs are missing in aggregation query. docCountError is:"
-                                            + terms.docCountErrorUpperBound() + " sumOfOtherDocCounts:" + terms.sumOtherDocCount());
-                                }
+                    Aggregate bucketsAggregate = aggregations.get("buckets");
+                    if (bucketsAggregate != null) {
+                        // TODO check if needed for dTerms and lTerms
+                        if (aggQueryThrowOnMissingDocs && bucketsAggregate.isSterms()) {
+                            StringTermsAggregate terms = bucketsAggregate.sterms();
+                            if (terms.docCountErrorUpperBound() > 0 || terms.sumOtherDocCount() > 0) {
+                                throw new UnsupportedOperationException("Some docs are missing in aggregation query. docCountError is:"
+                                        + terms.docCountErrorUpperBound() + " sumOfOtherDocCounts:" + terms.sumOtherDocCount());
                             }
-                            // TODO check if needed for dTerms and lTerms
                         }
 
-                        long totalDocCount = 0;
-                        Aggregate bucketsAggregate = aggregations.get("buckets");
-                        if (bucketsAggregate.isMultiTerms()) {
-                            MultiTermsAggregate terms = aggregations.get("buckets").multiTerms();
-                            for (MultiTermsBucket bucket : terms.buckets().array()) {
-                                results.put(bucket.keyAsString(), bucket.docCount());
-                                totalDocCount += bucket.docCount();
-                            }
-                        } else if (bucketsAggregate.isSterms()) {
-                            StringTermsAggregate terms = bucketsAggregate.sterms();
-                            for (StringTermsBucket bucket : terms.buckets().array()) {
-                                results.put(bucket.key().stringValue(), bucket.docCount());
-                                totalDocCount += bucket.docCount();
-                            }
-                        } else if (bucketsAggregate.isLterms()) {
-                            LongTermsAggregate terms = bucketsAggregate.lterms();
-                            for (LongTermsBucket bucket : terms.buckets().array()) {
-                                results.put(bucket.keyAsString(), bucket.docCount());
-                                totalDocCount += bucket.docCount();
-                            }
-                        } else if (bucketsAggregate.isDateHistogram()){
-                            DateHistogramAggregate histogramAggregate = bucketsAggregate.dateHistogram();
-                            for (DateHistogramBucket bucket : histogramAggregate.buckets().array()) {
-                                results.put(bucket.keyAsString(), bucket.docCount());
-                                totalDocCount += bucket.docCount();
-                            }
-                        }
+                        long totalDocCount = addBucketCounts(bucketsAggregate, aggregate, results);
 
                         Aggregate missingAgg = aggregations.get("missing");
                         if (missingAgg != null && missingAgg.isMissing()) {
@@ -2630,6 +2605,58 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return results;
             }
         }.catchingExecuteInClassLoader(true);
+    }
+
+    /**
+     * Adds the buckets of a terms, date histogram, or numeric, date or IP range aggregate to {@code results} and
+     * returns their total document count. {@code aggregate} supplies the keys of IP ranges.
+     */
+    static long addBucketCounts(Aggregate bucketsAggregate, BaseAggregate aggregate, Map<String, Long> results) {
+        long totalDocCount = 0;
+        if (bucketsAggregate.isMultiTerms()) {
+            for (MultiTermsBucket bucket : bucketsAggregate.multiTerms().buckets().array()) {
+                totalDocCount += addBucket(results, bucket.keyAsString(), bucket.docCount());
+            }
+        } else if (bucketsAggregate.isSterms()) {
+            for (StringTermsBucket bucket : bucketsAggregate.sterms().buckets().array()) {
+                totalDocCount += addBucket(results, bucket.key().stringValue(), bucket.docCount());
+            }
+        } else if (bucketsAggregate.isLterms()) {
+            for (LongTermsBucket bucket : bucketsAggregate.lterms().buckets().array()) {
+                totalDocCount += addBucket(results, bucketKey(bucket.keyAsString(), bucket.key()), bucket.docCount());
+            }
+        } else if (bucketsAggregate.isDterms()) {
+            for (DoubleTermsBucket bucket : bucketsAggregate.dterms().buckets().array()) {
+                totalDocCount += addBucket(results, bucketKey(bucket.keyAsString(), bucket.key()), bucket.docCount());
+            }
+        } else if (bucketsAggregate.isDateHistogram()) {
+            for (DateHistogramBucket bucket : bucketsAggregate.dateHistogram().buckets().array()) {
+                totalDocCount += addBucket(results, bucketKey(bucket.keyAsString(), bucket.key()), bucket.docCount());
+            }
+        } else if (bucketsAggregate.isRange()) {
+            totalDocCount += addRangeBucketCounts(bucketsAggregate.range().buckets().array(), results);
+        } else if (bucketsAggregate.isDateRange()) {
+            totalDocCount += addRangeBucketCounts(bucketsAggregate.dateRange().buckets().array(), results);
+        } else if (bucketsAggregate.isIpRange()) {
+            for (IpRangeBucket bucket : bucketsAggregate.ipRange().buckets().array()) {
+                totalDocCount += addBucket(results, ipRangeBucketKey(aggregate, bucket.key(), bucket.from(), bucket.to()),
+                        bucket.docCount());
+            }
+        } else {
+            LOGGER.warn("Aggregate results of type {} on field {} are not read, their buckets are left out",
+                    bucketsAggregate._kind(), aggregate.getField());
+        }
+        return totalDocCount;
+    }
+
+    private static long addRangeBucketCounts(List<RangeBucket> buckets, Map<String, Long> results) {
+        long totalDocCount = 0;
+        for (RangeBucket bucket : buckets) {
+            totalDocCount += addBucket(results,
+                    rangeBucketKey(bucket.key(), bucket.fromAsString(), bucket.from(), bucket.toAsString(), bucket.to()),
+                    bucket.docCount());
+        }
+        return totalDocCount;
     }
 
     private <T extends Item> String[] getRouting(String fieldName, String[] fieldValues, Class<T> clazz) {

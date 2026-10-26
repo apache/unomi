@@ -20,7 +20,7 @@ package org.apache.unomi.api.query;
 import java.io.Serializable;
 
 /**
- * Named inclusive date bucket for queries and aggregations.
+ * Named date bucket for queries and aggregations.
  * Combines a display {@code key} with {@code from} and {@code to} bounds so
  * segment conditions and aggregate queries can group events or profiles inside
  * a calendar window.
@@ -73,7 +73,7 @@ public class DateRange implements Serializable {
     }
 
     /**
-     * Inclusive upper bound of the interval.
+     * Upper bound of the interval, exclusive in range aggregations.
      *
      * @return end date or value
      */
@@ -82,7 +82,7 @@ public class DateRange implements Serializable {
     }
 
     /**
-     * Sets the inclusive upper bound.
+     * Sets the upper bound, exclusive in range aggregations.
      *
      * @param to end date or value
      */

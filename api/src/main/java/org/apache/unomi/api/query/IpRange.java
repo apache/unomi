@@ -20,9 +20,8 @@ package org.apache.unomi.api.query;
 import java.io.Serializable;
 
 /**
- * Named inclusive IP range used in geo or network segment conditions.
- * The {@code from} and {@code to} strings define lower and upper bounds checked
- * when evaluating whether a visitor's IP address belongs to the range.
+ * Named IP range used by property types and IP range aggregations.
+ * In range aggregations, {@code from} is inclusive and {@code to} is exclusive.
  */
 public class IpRange implements Serializable {
     private String key;
@@ -72,7 +71,7 @@ public class IpRange implements Serializable {
     }
 
     /**
-     * Inclusive upper IP bound.
+     * Upper IP bound, exclusive in range aggregations.
      *
      * @return end IP address
      */
@@ -81,7 +80,7 @@ public class IpRange implements Serializable {
     }
 
     /**
-     * Sets the inclusive upper IP bound.
+     * Sets the upper IP bound, exclusive in range aggregations.
      *
      * @param to end IP address
      */

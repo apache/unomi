@@ -20,7 +20,7 @@ package org.apache.unomi.api.query;
 import java.io.Serializable;
 
 /**
- * Named inclusive numeric bucket for query filters and aggregations.
+ * Named numeric bucket for query filters and aggregations.
  * Stores a {@code key} plus {@code from}/{@code to} bounds so conditions can
  * test profile or event properties against numeric intervals.
  */
@@ -72,7 +72,7 @@ public class NumericRange implements Serializable {
     }
 
     /**
-     * Inclusive upper bound.
+     * Upper bound, exclusive in range aggregations.
      *
      * @return upper bound, or {@code null} if unset
      */
@@ -81,7 +81,7 @@ public class NumericRange implements Serializable {
     }
 
     /**
-     * Sets the inclusive upper bound.
+     * Sets the upper bound, exclusive in range aggregations.
      *
      * @param to upper bound
      */
