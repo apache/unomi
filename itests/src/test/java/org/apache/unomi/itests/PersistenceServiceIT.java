@@ -437,6 +437,43 @@ public class PersistenceServiceIT extends BaseIT {
         Assert.assertEquals(Long.valueOf(2L), byLastName.get("_filtered"));
     }
 
+    /**
+     * Above 10,000 matches, the optimized aggregate must still report the exact number of matching items as
+     * _filtered, even when the bucket limit leaves some values out.
+     */
+    @Test
+    public void testOptimizedAggregateCountsMoreThan10000MatchesExactly() throws InterruptedException {
+        String marker = "agg-many-" + UUID.randomUUID();
+        int count = 10_005;
+        Condition matches = firstNameEquals(marker);
+        try {
+            for (int i = 0; i < count; i++) {
+                Profile profile = new Profile(marker + "-" + i);
+                profile.setProperty("firstName", marker);
+                profile.setProperty("lastName", "name-" + (i % 3));
+                persistenceService.save(profile, true);
+            }
+            keepTrying("All " + count + " profiles should be indexed", () -> {
+                        persistenceService.refreshIndex(Profile.class);
+                        return persistenceService.queryCount(matches, Profile.ITEM_TYPE);
+                    }, indexed -> indexed == count, DEFAULT_TRYING_TIMEOUT, 120);
+
+            // Three last names but a bucket limit of 1, so the buckets only hold about a third of the matches
+            Map<String, Long> byLastName = persistenceService.aggregateWithOptimizedQuery(matches,
+                    new TermsAggregate("properties.lastName"), Profile.ITEM_TYPE, 1);
+            Assert.assertEquals(Long.valueOf(count), byLastName.get("_filtered"));
+
+            // The non-optimized path counts the tenant (_all) and the matches (_filtered) exactly too
+            Map<String, Long> nonOptimized = persistenceService.aggregateQuery(matches,
+                    new TermsAggregate("properties.lastName"), Profile.ITEM_TYPE);
+            Assert.assertEquals(Long.valueOf(count), nonOptimized.get("_filtered"));
+            Assert.assertEquals(Long.valueOf(persistenceService.getAllItemsCount(Profile.ITEM_TYPE)), nonOptimized.get("_all"));
+        } finally {
+            persistenceService.removeByQuery(matches, Profile.class);
+            refreshPersistence(Profile.class);
+        }
+    }
+
     private Condition matchAllCondition() {
         return new Condition(definitionsService.getConditionType("matchAllCondition"));
     }
