@@ -16,16 +16,46 @@
 
 In this section of the documentation, more details are provided about the web tracker provided by Unomi.
 
-==== Authentication (Unomi 4.0)
+[#_web_tracker_server_versions]
+==== Configuring the tracker for your Unomi server
 
-Public context and event endpoints require a tenant public API key (`X-Unomi-Api-Key`) unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled.
+The same tracker works with Unomi 2.x, 3.x and 4.x. Only its configuration changes: on a multi-tenant Unomi 4 server, set `apiKey` in `wemInitConfig` to the tenant's public API key.
 
-The built-in WAB tracker sample does **not** currently attach that header. For production 4.0 deployments:
+[cols="1,1,1",options="header"]
+|===
+|Unomi server
+|`apiKey` in `wemInitConfig`
+|Data goes to
 
-* Prefer the NPM package / custom integration that can set `X-Unomi-Api-Key` (see <<_javascript_tracker_guide,JavaScript tracker guide>>), or
-* Enable V2 compatibility mode only as a temporary migration aid.
+|2.x or 3.x
+|Leave it out
+|The server (no tenants)
 
-Create a tenant and obtain plaintext public/private keys via `POST /cxs/tenants/{id}/apikeys` before integrating a site. See <<_multitenancy,Multi-tenancy>> and the <<_unomi_web_tracking_tutorial,web tracking tutorial>>.
+|4.x in <<_v2_compatibility_mode,single-tenant compatibility mode>>
+|Leave it out (a key is ignored)
+|Tenant `default`
+
+|4.x multi-tenant
+|The tenant's *public* API key
+|That tenant
+|===
+
+[source,javascript]
+----
+    "wemInitConfig": {
+        "contextServerUrl": "https://cdp.example.com",
+        ...
+        "apiKey": "YOUR_PUBLIC_API_KEY"
+    }
+----
+
+The tracker sends the key in the `X-Unomi-Api-Key` header on `context.json` and `eventcollector` requests. Without a key, a Unomi 4 server that is not in compatibility mode answers `401`.
+
+* Use the tenant's *public* key only, never its private key: the page configuration is visible to every visitor. The public key identifies the tenant; the tracker does not need a tenant ID.
+* A custom header makes the browser send a CORS preflight request before each request when Unomi is on another origin. Unomi 2.x and 3.x servers accept the header and ignore it, so a page that sets a key still works with them.
+* Create the tenant and obtain its plaintext keys with `POST /cxs/tenants/{id}/apikeys` before integrating a site. See <<_multitenancy,Multi-tenancy>>.
+
+`apiKey` and `sendCredentials` need version 2.0.0 or later of the tracker (the `apache-unomi-tracker` NPM package). Earlier versions of the tracker bundled at `/tracker/unomi-web-tracker.js` do not send the key; use compatibility mode with them.
 
 ==== Custom events
 
@@ -196,7 +226,7 @@ In order to track profiles, an identifier must be stored in the browser so that 
 Unomi's web tracker uses 3 cookies in the tracker by default:
 
 - server profile ID, called `context-profile-id` by default, that is sent from the Unomi server
-- web tracker profile ID, called `web-profile-id` by default (this is a copy of the server profile ID that can be managed by the tracker directly)
+- web tracker profile ID, called `wem-profile-id` by default (this is a copy of the server profile ID that can be managed by the tracker directly)
 - web tracker session ID, called `wem-session-id` by default
 
 It is possible to change the name of these cookie by passing the following properties to the start's initialization:
@@ -213,7 +243,7 @@ It is possible to change the name of these cookie by passing the following prope
 
 Please note however that the `contextServerCookieName` will also have to be changed in the server configuration in order for it to work. See the <<_configuration,Configuration>> section for details on how to do this.
 
-The tracker sends requests with cookies. When the website and Unomi are on different origins, another subdomain included (`www.example.com` and `cdp.example.com`), list the website origin on the server (`UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS`) or in the tenant's `publicCorsAllowedOrigins` property; otherwise the browser blocks the responses and Unomi does not use the visitor cookie. A website served from the same origin as Unomi, through a reverse proxy, needs no list. A website on another site also needs HTTPS and `SameSite=None`; see <<_public_tracker_origins,Websites on other origins>>. In single-tenant compatibility mode, embedding `context.js` with a `<script>` tag from another origin is served without the visitor cookie (a new anonymous profile on every page view) unless the operator turns on `org.apache.unomi.public.cors.matchReferer`; see <<_public_tracker_script_tag,Embedding `context.js` with a script tag>>. If the deployment does not need the visitor cookie, set `sendCredentials` to `false` in `wemInitConfig`. Requests are then sent without cookies and work with the default server settings, but every request starts a new anonymous profile.
+The tracker sends requests with cookies. When the website and Unomi are on different origins, another subdomain included (`www.example.com` and `cdp.example.com`), list the website origin on the server (`UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS`) or in the tenant's `publicCorsAllowedOrigins` property; otherwise the browser blocks the responses and Unomi does not use the visitor cookie. A website served from the same origin as Unomi, through a reverse proxy, needs no list. A website on another site also needs HTTPS and `SameSite=None`; see <<_public_tracker_origins,Websites on other origins>>. In single-tenant compatibility mode, embedding `context.js` with a `<script>` tag from another origin is served without the visitor cookie (a new anonymous profile on every page view) unless the operator turns on `org.apache.unomi.public.cors.matchReferer`; see <<_public_tracker_script_tag,Embedding `context.js` with a script tag>>. If the deployment does not need the visitor cookie, set `sendCredentials` to `false` in `wemInitConfig` (tracker 2.0.0 or later). Requests are then sent without cookies and work with the default server settings, but every request starts a new anonymous profile. Unomi 2.x and 3.x servers instead find the profile through the session, so it lasts for the session.
 
 For session tracking, it is important to provide a value for the cookie otherwise the tracker will not initialize (a message is displayed in the console that explains that the session cookie is missing). Here is the code excerpt from the initialization code used in the tutorial that creates the initial cookie value.
 

@@ -18,11 +18,7 @@ In this tutorial we will guide through the basic steps of getting started with a
 
 If you prefer to use existing HTML and Javascript rather than building your own, all the code we feature in this tutorial is extracted from our tracker sample which is available here: https://github.com/apache/unomi/blob/master/extensions/web-tracker/wab/src/main/webapp/index.html . However you will still need to use the REST API calls to create the scope and rule to make it all work.
 
-IMPORTANT: On Unomi **4.0**, `/cxs/context.json` and `/cxs/eventcollector` require a tenant **public** API key.
-The bundled `unomi-web-tracker` does not yet send `X-Unomi-Api-Key`. For this tutorial, either:
-
-* Enable <<_v2_compatibility_mode,V2 compatibility mode>> for local learning (public endpoints work without API keys), **or**
-* Use the NPM tracker / custom fetch wrappers that set `X-Unomi-Api-Key` (see <<_javascript_tracker_guide,JavaScript tracker guide>>), after creating a tenant and regenerating keys (see <<_multitenancy,Multi-tenancy>>).
+IMPORTANT: On Unomi **4.0**, `/cxs/context.json` and `/cxs/eventcollector` require a tenant **public** API key. Set it as `apiKey` in the tracker's `wemInitConfig`, as in the snippets below (tracker 2.0.0 or later). Remove the `apiKey` line for Unomi 2.x or 3.x, or if you enable <<_v2_compatibility_mode,single-tenant compatibility mode>>. See <<_web_tracker_server_versions,Configuring the tracker for your Unomi server>>. To obtain the key, create a tenant and regenerate its keys (see <<_multitenancy,Multi-tenancy>>).
 
 Create a scope and rules with tenant private-key or JAAS admin authentication as shown below.
 
@@ -65,7 +61,6 @@ This will only load the tracker. To initialize it use a snippet like the followi
                         "categories": [],
                         "tags": []
                     },
-                    "attributes": {},
                     "consentTypes": []
                 },
                 "events": [],
@@ -75,7 +70,9 @@ This will only load the tracker. To initialize it use a snippet like the followi
                     "contextServerCookieName": "context-profile-id",
                     "activateWem": true,
                     "trackerSessionIdCookieName": "unomi-tracker-test-session-id",
-                    "trackerProfileIdCookieName": "unomi-tracker-test-profile-id"
+                    "trackerProfileIdCookieName": "unomi-tracker-test-profile-id",
+                    // Unomi 4 multi-tenant only: the tenant's public API key
+                    "apiKey": "YOUR_PUBLIC_API_KEY"
                 }
             }
 
@@ -155,7 +152,6 @@ import {useTracker} from "apache-unomi-tracker";
                 "categories": [],
                 "tags": []
             },
-            "attributes": {},
             "consentTypes": []
         },
         "events": [],
@@ -165,7 +161,9 @@ import {useTracker} from "apache-unomi-tracker";
             "contextServerCookieName": "context-profile-id",
             "activateWem": true,
             "trackerSessionIdCookieName": "unomi-tracker-test-session-id",
-            "trackerProfileIdCookieName": "unomi-tracker-test-profile-id"
+            "trackerProfileIdCookieName": "unomi-tracker-test-profile-id",
+            // Unomi 4 multi-tenant only: the tenant's public API key
+            "apiKey": "YOUR_PUBLIC_API_KEY"
         }
     }
 

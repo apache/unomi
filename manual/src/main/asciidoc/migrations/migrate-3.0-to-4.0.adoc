@@ -220,7 +220,7 @@ Anonymous browsing, personas and profile overrides are otherwise unchanged, and 
 
 ===== Migrating a client
 
-* Browser trackers need no change: the browser sends the cookie automatically, and the response still carries `profileId` and `sessionId`.
+* Browser trackers need no change for this: the browser sends the cookie automatically, and the response still carries `profileId` and `sessionId`. They do need the tenant's public API key; for the Unomi web tracker, see <<_web_tracker_server_versions,Configuring the tracker for your Unomi server>>.
 * A backend that named a profile through body `profileId` while authenticating with a *public* key must switch to a tenant private key, or to system administrator credentials. Until it does, the server logs a `WARN` naming the ignored `profileId` on every such request.
 * A client that supplied a session id it did not own now finds `sessionId` absent from the response. Treat that as "start a new session" and generate a fresh id rather than replaying the old one.
 
@@ -498,6 +498,7 @@ console (port 8102) is not covered by that check.
 
 ===== Migration checklist for client applications
 
+* Unomi web tracker: update to version 2.0.0 or later and set `apiKey` to the tenant's public API key (see <<_web_tracker_server_versions,Configuring the tracker for your Unomi server>>).
 * Browser / tracker clients: ensure cookies are sent (`withCredentials` / same-site setup); list every website origin that calls Unomi from another origin in `UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS` or in its tenant's `publicCorsAllowedOrigins` property (and, for another site, use HTTPS with `SameSite=None`, or serve Unomi from the website's origin); stop treating body `profileId` as authoritative for public calls.
 * Headless or mobile public clients that stored a UUID and posted it only in the body: switch to sending the profile cookie, or call with a **private key** when you intentionally bind a profile.
 * Login / merge flows: emit merge-triggering events from a trusted server-side caller after real authentication — not from the public key alone.
@@ -558,7 +559,7 @@ Unomi 4.0 does **not** provide a separate "3.0 compatibility mode" system proper
 
 ==== Option 1: Update clients to 4.0 authentication (recommended)
 
-Adopt tenant public API keys for public endpoints and tenant private keys or JAAS for administrative work. See <<_multitenancy,Multi-tenancy>> and the authentication examples in this guide.
+Adopt tenant public API keys for public endpoints and tenant private keys or JAAS for administrative work. See <<_multitenancy,Multi-tenancy>> and the authentication examples in this guide. For the Unomi web tracker, set `apiKey`; see <<_web_tracker_server_versions,Configuring the tracker for your Unomi server>>.
 
 ==== Option 2: single-tenant compatibility mode (2.x clients only)
 

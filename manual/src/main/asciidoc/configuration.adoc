@@ -716,7 +716,7 @@ Other behaviour that changed:
 
 ===== Tracker without cookies
 
-A deployment that does not need the visitor cookie can set `sendCredentials: false` in the tracker's `wemInitConfig` (see <<_unomi_web_tracker_reference,the web tracker>>). Requests are then sent without cookies and work with the default settings, but each request starts a new anonymous profile.
+A deployment that does not need the visitor cookie can set `sendCredentials: false` in the tracker's `wemInitConfig` (tracker 2.0.0 or later, see <<_unomi_web_tracker_reference,the web tracker>>). Requests are then sent without cookies and work with the default settings, but each request starts a new anonymous profile.
 
 === Scripting security
 

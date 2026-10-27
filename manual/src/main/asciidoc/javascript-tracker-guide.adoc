@@ -18,7 +18,7 @@ This guide explains how to implement a basic JavaScript tracker for Apache Unomi
 
 [NOTE]
 ====
-Apache Unomi provides an official web tracker (see <<_unomi_web_tracker_reference,Unomi Web Tracker reference>>) that handles many of these details automatically. This guide is useful if you need a custom implementation or want to understand how the tracker works internally.
+Apache Unomi provides an official web tracker (see <<_unomi_web_tracker_reference,Unomi Web Tracker reference>>) that handles many of these details automatically, including the API key (see <<_web_tracker_server_versions,Configuring the tracker for your Unomi server>>). This guide is useful if you need a custom implementation or want to understand how the tracker works internally.
 ====
 
 ==== Prerequisites
