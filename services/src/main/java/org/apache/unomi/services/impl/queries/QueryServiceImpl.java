@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Objects;
 
 public class QueryServiceImpl implements QueryService {
     private static final Logger LOGGER = LoggerFactory.getLogger(QueryServiceImpl.class.getName());
@@ -99,12 +100,12 @@ public class QueryServiceImpl implements QueryService {
                 if (aggregateType != null) {
                     // try to guess the aggregate type
                     if (aggregateType.equals("date")) {
-                        String interval = (String) query.getAggregate().getParameters().get("interval");
-                        String format = (String) query.getAggregate().getParameters().get("format");
+                        String interval = Objects.toString(query.getAggregate().getParameters().get("interval"), null);
+                        String format = Objects.toString(query.getAggregate().getParameters().get("format"), null);
                         baseAggregate = new DateAggregate(property, interval, format);
                     } else if (aggregateType.equals("dateRange") && query.getAggregate().getDateRanges() != null && !query.getAggregate()
                             .getDateRanges().isEmpty()) {
-                        String format = (String) query.getAggregate().getParameters().get("format");
+                        String format = Objects.toString(query.getAggregate().getParameters().get("format"), null);
                         baseAggregate = new DateRangeAggregate(query.getAggregate().getProperty(), format, query.getAggregate().getDateRanges());
                     } else if (aggregateType.equals("numericRange") && query.getAggregate().getNumericRanges() != null && !query.getAggregate()
                             .getNumericRanges().isEmpty()) {

@@ -558,11 +558,11 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
             if (query.getAggregate().getType() != null){
                 // try to guess the aggregate type
                 if(query.getAggregate().getType().equals("date")) {
-                    String interval = (String) query.getAggregate().getParameters().get("interval");
-                    String format = (String) query.getAggregate().getParameters().get("format");
+                    String interval = Objects.toString(query.getAggregate().getParameters().get("interval"), null);
+                    String format = Objects.toString(query.getAggregate().getParameters().get("format"), null);
                     aggregate = new DateAggregate(property, interval, format);
                 } else if (query.getAggregate().getType().equals("dateRange") && query.getAggregate().getDateRanges() != null && query.getAggregate().getDateRanges().size() > 0) {
-                    String format = (String) query.getAggregate().getParameters().get("format");
+                    String format = Objects.toString(query.getAggregate().getParameters().get("format"), null);
                     aggregate = new DateRangeAggregate(property, format, query.getAggregate().getDateRanges());
                 } else if (query.getAggregate().getType().equals("numericRange") && query.getAggregate().getNumericRanges() != null && query.getAggregate().getNumericRanges().size() > 0) {
                     aggregate = new NumericRangeAggregate(property, query.getAggregate().getNumericRanges());
