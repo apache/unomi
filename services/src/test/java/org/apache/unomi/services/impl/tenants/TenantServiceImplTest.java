@@ -481,6 +481,22 @@ public class TenantServiceImplTest {
         assertEquals("acme", tenantService.getTenantByApiKey("kept-key").getItemId());
     }
 
+    @Test
+    public void apiKeyMissRefreshIntervalIsConfigurableAndMustBePositive() {
+        storeTenants();
+        tenantService.setApiKeyMissRefreshInterval(1_000);
+        assertNull(tenantService.getTenantByApiKey("unknown"));
+        clock.addAndGet(TimeUnit.MILLISECONDS.toNanos(1_000));
+        assertNull(tenantService.getTenantByApiKey("unknown"));
+        verify(persistenceService, times(2)).getAllItems(Tenant.class);
+
+        // A non-positive value falls back to the default instead of reloading on every unknown key.
+        tenantService.setApiKeyMissRefreshInterval(0);
+        assertNull(tenantService.getTenantByApiKey("unknown"));
+        assertNull(tenantService.getTenantByApiKey("unknown"));
+        verify(persistenceService, times(3)).getAllItems(Tenant.class);
+    }
+
     /** Backs {@code getAllItems} and load-by-id with the given tenants. */
     private void storeTenants(Tenant... tenants) {
         when(persistenceService.getAllItems(Tenant.class)).thenReturn(List.of(tenants));

@@ -72,6 +72,8 @@ public class TenantServiceImpl implements TenantService {
      * context manager are set. Package-visible so unit tests can drive refresh timing.
      */
     TenantApiKeyIndex apiKeyIndex;
+    private long apiKeyRefreshInterval = TenantApiKeyIndex.DEFAULT_REFRESH_INTERVAL_MILLIS;
+    private long apiKeyMissRefreshInterval = TenantApiKeyIndex.DEFAULT_MISS_REFRESH_INTERVAL_MILLIS;
 
     /**
      * Sets the persistence service via Blueprint dependency injection.
@@ -102,6 +104,38 @@ public class TenantServiceImpl implements TenantService {
         this.secretHashService = secretHashService;
     }
 
+    /**
+     * How often, in milliseconds, the API key index is reloaded in full to pick up keys created on other
+     * nodes ({@code tenant.apikey.refresh.interval}).
+     *
+     * @param apiKeyRefreshInterval a positive interval; anything else keeps the default
+     */
+    public void setApiKeyRefreshInterval(long apiKeyRefreshInterval) {
+        this.apiKeyRefreshInterval = positiveOrDefault("tenant.apikey.refresh.interval", apiKeyRefreshInterval,
+                TenantApiKeyIndex.DEFAULT_REFRESH_INTERVAL_MILLIS);
+        rebuildApiKeyIndex();
+    }
+
+    /**
+     * Minimum time, in milliseconds, between API key index reloads triggered by unknown keys
+     * ({@code tenant.apikey.miss.refresh.interval}). Bounds the load requests with invalid keys can cause.
+     *
+     * @param apiKeyMissRefreshInterval a positive interval; anything else keeps the default
+     */
+    public void setApiKeyMissRefreshInterval(long apiKeyMissRefreshInterval) {
+        this.apiKeyMissRefreshInterval = positiveOrDefault("tenant.apikey.miss.refresh.interval", apiKeyMissRefreshInterval,
+                TenantApiKeyIndex.DEFAULT_MISS_REFRESH_INTERVAL_MILLIS);
+        rebuildApiKeyIndex();
+    }
+
+    private static long positiveOrDefault(String name, long value, long defaultValue) {
+        if (value > 0) {
+            return value;
+        }
+        LOGGER.warn("{} must be a positive number of milliseconds, got {}; using {}", name, value, defaultValue);
+        return defaultValue;
+    }
+
     private void rebuildApiKeyIndex() {
         if (persistenceService == null || executionContextManager == null) {
             return;
@@ -109,7 +143,7 @@ public class TenantServiceImpl implements TenantService {
         apiKeyIndex = new TenantApiKeyIndex(
                 () -> executionContextManager.executeAsSystem(() -> persistenceService.getAllItems(Tenant.class)),
                 tenantId -> executionContextManager.executeAsSystem(() -> persistenceService.load(tenantId, Tenant.class)),
-                nanoClock);
+                nanoClock, apiKeyRefreshInterval, apiKeyMissRefreshInterval);
     }
 
     private void notifyApiKeyIndexSaved(Tenant tenant) {

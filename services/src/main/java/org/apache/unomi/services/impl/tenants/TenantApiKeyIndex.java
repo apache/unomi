@@ -40,13 +40,15 @@ import java.util.function.Supplier;
  * load every tenant on each request (UNOMI-1016). Same refresh pattern as the tenant origins snapshot:
  * <ul>
  *     <li>Loaded in full on the first lookup. Lookups never wait on a load another request is running:
- *     during the first one they are refused, and the load is retried on a miss at most every
- *     {@value #MISS_RELOAD_SECONDS} seconds if it fails.</li>
+ *     during the first one they are refused, and the load is retried on a miss at most once per miss
+ *     interval if it fails.</li>
  *     <li>Updated in place when a tenant is saved or removed through this node.</li>
- *     <li>Reloaded in full every {@value #REFRESH_SECONDS} seconds by one request while others keep
+ *     <li>Reloaded in full once per refresh interval by one request while others keep
  *     the current state, to pick up keys created on other nodes.</li>
- *     <li>Reloaded on a miss at most every {@value #MISS_RELOAD_SECONDS} seconds.</li>
+ *     <li>Reloaded on a miss at most once per miss interval.</li>
  * </ul>
+ * Both intervals are configurable (defaults {@value #DEFAULT_REFRESH_INTERVAL_MILLIS} and
+ * {@value #DEFAULT_MISS_REFRESH_INTERVAL_MILLIS} ms); see {@link TenantServiceImpl#setApiKeyRefreshInterval}.
  * The index only says which tenant a hash may belong to. A hit is confirmed against that tenant freshly
  * loaded by id, so a key revoked, rotated or expired — or a tenant deleted — on any node is refused on
  * the next request, not on the next refresh. Key hashes are deterministic (SHA-256), so a plaintext key
@@ -56,12 +58,14 @@ final class TenantApiKeyIndex {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TenantApiKeyIndex.class);
 
-    static final int REFRESH_SECONDS = 30;
-    static final int MISS_RELOAD_SECONDS = 5;
+    static final long DEFAULT_REFRESH_INTERVAL_MILLIS = 30_000;
+    static final long DEFAULT_MISS_REFRESH_INTERVAL_MILLIS = 5_000;
 
     private final Supplier<List<Tenant>> loader;
     private final Function<String, Tenant> tenantById;
     private final LongSupplier clock;
+    private final long refreshNanos;
+    private final long missRefreshNanos;
     /** Serializes full loads. Not held by saves and removals, so they never wait on a slow load. */
     private final ReentrantLock loadLock = new ReentrantLock();
     /** Guards {@link #tenantIdByKeyHash} updates and {@link #changesDuringLoad}. */
@@ -82,9 +86,20 @@ final class TenantApiKeyIndex {
     private volatile long lastAttemptAt;
 
     TenantApiKeyIndex(Supplier<List<Tenant>> loader, Function<String, Tenant> tenantById, LongSupplier clock) {
+        this(loader, tenantById, clock, DEFAULT_REFRESH_INTERVAL_MILLIS, DEFAULT_MISS_REFRESH_INTERVAL_MILLIS);
+    }
+
+    /**
+     * @param refreshMillis     how often the index is reloaded in full, in milliseconds
+     * @param missRefreshMillis minimum time between reloads triggered by unknown keys, in milliseconds
+     */
+    TenantApiKeyIndex(Supplier<List<Tenant>> loader, Function<String, Tenant> tenantById, LongSupplier clock,
+                      long refreshMillis, long missRefreshMillis) {
         this.loader = loader;
         this.tenantById = tenantById;
         this.clock = clock;
+        this.refreshNanos = TimeUnit.MILLISECONDS.toNanos(refreshMillis);
+        this.missRefreshNanos = TimeUnit.MILLISECONDS.toNanos(missRefreshMillis);
     }
 
     /**
@@ -147,11 +162,11 @@ final class TenantApiKeyIndex {
     }
 
     /**
-     * Reloads now unless a full load was tried in the last {@value #MISS_RELOAD_SECONDS} seconds or
+     * Reloads now unless a full load was tried within the miss interval or
      * another reload is running, and returns the resulting map.
      */
     Map<String, String> afterMiss() {
-        if (!attempted || clock.getAsLong() - lastAttemptAt >= TimeUnit.SECONDS.toNanos(MISS_RELOAD_SECONDS)) {
+        if (!attempted || clock.getAsLong() - lastAttemptAt >= missRefreshNanos) {
             tryReload();
         }
         return tenantIdByKeyHash;
@@ -227,12 +242,12 @@ final class TenantApiKeyIndex {
                 changesDuringLoad = null;
                 tenantIdByKeyHash = Collections.unmodifiableMap(byHash);
             }
-            nextRefreshAt = now + TimeUnit.SECONDS.toNanos(REFRESH_SECONDS);
+            nextRefreshAt = now + refreshNanos;
         } catch (RuntimeException e) {
             synchronized (stateLock) {
                 changesDuringLoad = null;
             }
-            nextRefreshAt = now + TimeUnit.SECONDS.toNanos(MISS_RELOAD_SECONDS);
+            nextRefreshAt = now + missRefreshNanos;
             LOGGER.warn("Could not load the API key → tenant index; keeping the previous one: {}", e.getMessage());
             LOGGER.debug("API key index load failure", e);
         }

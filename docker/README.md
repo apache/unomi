@@ -139,6 +139,12 @@ Note: Linux doesn't support the host.docker.internal DNS lookup method yet, it s
 
 See "Websites on other origins" in the manual's configuration chapter.
 
+### API keys
+- `UNOMI_TENANT_APIKEY_REFRESH_INTERVAL`: How often, in milliseconds, each node reloads its list of API keys to pick up keys created on other nodes (default: `30000`)
+- `UNOMI_TENANT_APIKEY_MISS_REFRESH_INTERVAL`: Minimum time, in milliseconds, between reloads triggered by unknown keys (default: `5000`)
+
+Revoked, replaced and expired keys are refused at once on every node whatever these are set to. See "When a key change takes effect" in the manual's multi-tenancy chapter.
+
 ### ElasticSearch-specific Variables
 - `UNOMI_ELASTICSEARCH_ADDRESSES`: ElasticSearch host:port (default: localhost:9200)
 - `UNOMI_ELASTICSEARCH_USERNAME`: Optional username for ElasticSearch

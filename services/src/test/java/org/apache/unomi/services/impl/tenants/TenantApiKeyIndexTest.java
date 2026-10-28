@@ -41,8 +41,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TenantApiKeyIndexTest {
 
-    private static final long REFRESH = TimeUnit.SECONDS.toNanos(TenantApiKeyIndex.REFRESH_SECONDS);
-    private static final long MISS = TimeUnit.SECONDS.toNanos(TenantApiKeyIndex.MISS_RELOAD_SECONDS);
+    private static final long REFRESH = TimeUnit.MILLISECONDS.toNanos(TenantApiKeyIndex.DEFAULT_REFRESH_INTERVAL_MILLIS);
+    private static final long MISS = TimeUnit.MILLISECONDS.toNanos(TenantApiKeyIndex.DEFAULT_MISS_REFRESH_INTERVAL_MILLIS);
 
     private final List<Tenant> tenants = new CopyOnWriteArrayList<>();
     private final AtomicInteger loads = new AtomicInteger();
@@ -89,6 +89,25 @@ class TenantApiKeyIndexTest {
         now[0] += 1;
         index.current();
         assertEquals(2, loads.get());
+    }
+
+    @Test
+    void usesConfiguredIntervals() {
+        TenantApiKeyIndex custom = new TenantApiKeyIndex(() -> {
+            loads.incrementAndGet();
+            return new ArrayList<>(tenants);
+        }, this::byId, () -> now[0], 2_000, 500);
+        custom.load();
+        now[0] += TimeUnit.MILLISECONDS.toNanos(500);
+        custom.afterMiss();
+        assertEquals(2, loads.get());
+        // Any full load restarts the refresh interval.
+        now[0] += TimeUnit.MILLISECONDS.toNanos(2_000) - 1;
+        custom.current();
+        assertEquals(2, loads.get());
+        now[0] += 1;
+        custom.current();
+        assertEquals(3, loads.get());
     }
 
     @Test
