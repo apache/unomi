@@ -33,7 +33,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -167,30 +166,36 @@ class TenantApiKeyIndexTest {
     }
 
     @Test
-    void lookupsDuringFirstLoadWaitForIt() throws Exception {
+    void lookupsDuringALoadAreRefusedWithoutWaiting() throws Exception {
         loadGate = new CountDownLatch(1);
         loadRead = new CountDownLatch(1);
         ExecutorService pool = Executors.newSingleThreadExecutor();
         try {
             Future<Tenant> first = pool.submit(() -> index.find("plain-public", null, hashService));
             assertTrue(loadRead.await(10, TimeUnit.SECONDS));
-            AtomicReference<Tenant> second = new AtomicReference<>();
-            Thread waiter = new Thread(() -> second.set(index.find("plain-public", null, hashService)));
-            waiter.start();
-            // The second lookup must block on the first load rather than answer from the empty index.
-            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-            while (waiter.getState() != Thread.State.WAITING && waiter.isAlive() && System.nanoTime() < deadline) {
-                Thread.sleep(5);
-            }
-            assertTrue(waiter.isAlive(), "Second lookup answered before the first load finished");
+            // The first load is still running: answer at once instead of queueing behind it.
+            assertNull(index.find("plain-public", null, hashService));
             loadGate.countDown();
-            waiter.join(10_000);
             assertEquals("acme", first.get(10, TimeUnit.SECONDS).getItemId());
-            assertEquals("acme", second.get().getItemId());
-            assertEquals(1, loads.get());
         } finally {
             pool.shutdownNow();
         }
+        assertEquals("acme", index.find("plain-public", null, hashService).getItemId());
+        assertEquals(1, loads.get());
+    }
+
+    @Test
+    void manyUnknownKeysTriggerAtMostOneLoadPerMissWindow() {
+        index.load();
+        for (int i = 0; i < 1_000; i++) {
+            assertNull(index.find("unknown-" + i, null, hashService));
+        }
+        assertEquals(1, loads.get());
+        now[0] += MISS;
+        for (int i = 0; i < 1_000; i++) {
+            assertNull(index.find("unknown-" + i, null, hashService));
+        }
+        assertEquals(2, loads.get());
     }
 
     @Test

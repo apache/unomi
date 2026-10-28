@@ -39,7 +39,9 @@ import java.util.function.Supplier;
  * In-memory map from API key hash to tenant id, so {@link TenantServiceImpl#getTenantByApiKey} does not
  * load every tenant on each request (UNOMI-1016). Same refresh pattern as the tenant origins snapshot:
  * <ul>
- *     <li>Loaded in full on the first lookup; lookups made meanwhile wait for that first load.</li>
+ *     <li>Loaded in full on the first lookup. Lookups never wait on a load another request is running:
+ *     during the first one they are refused, and the load is retried on a miss at most every
+ *     {@value #MISS_RELOAD_SECONDS} seconds if it fails.</li>
  *     <li>Updated in place when a tenant is saved or removed through this node.</li>
  *     <li>Reloaded in full every {@value #REFRESH_SECONDS} seconds by one request while others keep
  *     the current state, to pick up keys created on other nodes.</li>
@@ -73,9 +75,8 @@ final class TenantApiKeyIndex {
      * load is running; guarded by {@link #stateLock}.
      */
     private Map<String, List<String>> changesDuringLoad;
-    private volatile boolean loaded;
     private volatile boolean attempted;
-    /** When the next periodic reload is due; meaningful once {@link #loaded}. */
+    /** When the next periodic reload is due; meaningful once {@link #attempted}. */
     private volatile long nextRefreshAt;
     /** When the last full load was tried; meaningful once {@link #attempted}. */
     private volatile long lastAttemptAt;
@@ -134,21 +135,12 @@ final class TenantApiKeyIndex {
     }
 
     /**
-     * The current hash → tenant id map. Until a first load has succeeded, waits for one (trying again at
-     * most every {@value #MISS_RELOAD_SECONDS} seconds); afterwards refreshes first if the periodic
-     * reload is due, without waiting for a reload another request is running.
+     * The current hash → tenant id map, refreshed first if the periodic reload is due. Never waits: while
+     * another request runs a load, this one answers from the map as it is — so until the first load has
+     * finished, keys this node has not seen saved are refused rather than queued behind it.
      */
     Map<String, String> current() {
-        if (!loaded) {
-            loadLock.lock();
-            try {
-                if (!loaded && (!attempted || clock.getAsLong() - lastAttemptAt >= TimeUnit.SECONDS.toNanos(MISS_RELOAD_SECONDS))) {
-                    doLoad();
-                }
-            } finally {
-                loadLock.unlock();
-            }
-        } else if (clock.getAsLong() - nextRefreshAt >= 0) {
+        if (!attempted || clock.getAsLong() - nextRefreshAt >= 0) {
             tryReload();
         }
         return tenantIdByKeyHash;
@@ -235,7 +227,6 @@ final class TenantApiKeyIndex {
                 changesDuringLoad = null;
                 tenantIdByKeyHash = Collections.unmodifiableMap(byHash);
             }
-            loaded = true;
             nextRefreshAt = now + TimeUnit.SECONDS.toNanos(REFRESH_SECONDS);
         } catch (RuntimeException e) {
             synchronized (stateLock) {
