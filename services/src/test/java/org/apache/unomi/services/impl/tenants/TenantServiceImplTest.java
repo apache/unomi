@@ -356,7 +356,7 @@ public class TenantServiceImplTest {
     }
 
     @Test
-    public void getTenantByApiKeyRejectsWhenVerifyFails() {
+    public void getTenantByApiKeyRejectsUnknownKey() {
         Tenant tenant = new Tenant();
         tenant.setItemId("tenant-with-keys");
         ApiKey apiKey = new ApiKey();
@@ -365,29 +365,64 @@ public class TenantServiceImplTest {
         tenant.setApiKeys(new ArrayList<>(List.of(apiKey)));
 
         when(persistenceService.getAllItems(Tenant.class)).thenReturn(List.of(tenant));
-        when(secretHashService.verify("wrong-key", "stored-hash")).thenReturn(false);
 
         assertNull(tenantService.getTenantByApiKey("wrong-key"),
-                "A key that fails verification should be rejected");
-        verify(secretHashService).verify("wrong-key", "stored-hash");
+                "A key whose hash is not in the index should be rejected");
+        verify(secretHashService).hash("wrong-key");
+        verify(secretHashService, never()).verify(anyString(), anyString());
     }
 
     @Test
-    public void getTenantByApiKeyAcceptsWhenVerifySucceeds() {
+    public void getTenantByApiKeyResolvesByHashWithoutScanningTenantsAgain() {
         Tenant tenant = new Tenant();
         tenant.setItemId("tenant-with-keys");
         ApiKey apiKey = new ApiKey();
-        apiKey.setKeyHash("stored-hash");
+        apiKey.setKeyHash("candidate-key");
         apiKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
         tenant.setApiKeys(new ArrayList<>(List.of(apiKey)));
 
         when(persistenceService.getAllItems(Tenant.class)).thenReturn(List.of(tenant));
-        when(secretHashService.verify("candidate-key", "stored-hash")).thenReturn(true);
 
         Tenant found = tenantService.getTenantByApiKey("candidate-key");
         assertEquals("tenant-with-keys", found.getItemId(),
-                "A verified key should resolve to its tenant");
-        verify(secretHashService).verify("candidate-key", "stored-hash");
+                "A hashed key should resolve to its tenant");
+        // Second lookup must use the in-memory index (UNOMI-1016).
+        assertEquals("tenant-with-keys", tenantService.getTenantByApiKey("candidate-key").getItemId());
+        verify(persistenceService, times(1)).getAllItems(Tenant.class);
+        verify(secretHashService, never()).verify(anyString(), anyString());
+    }
+
+    @Test
+    public void getTenantByApiKeySeesNewlySavedKeyWithoutWaitingForRefresh() {
+        when(persistenceService.getAllItems(Tenant.class)).thenReturn(Collections.emptyList());
+        assertNull(tenantService.getTenantByApiKey("new-key"));
+
+        Tenant tenant = new Tenant();
+        tenant.setItemId("fresh-tenant");
+        ApiKey apiKey = new ApiKey();
+        apiKey.setKeyHash("new-key");
+        apiKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
+        tenant.setApiKeys(new ArrayList<>(List.of(apiKey)));
+        tenantService.saveTenant(tenant);
+
+        assertEquals("fresh-tenant", tenantService.getTenantByApiKey("new-key").getItemId());
+        verify(persistenceService, times(1)).getAllItems(Tenant.class);
+    }
+
+    @Test
+    public void getTenantByApiKeyRefusesRevokedKey() {
+        Tenant tenant = new Tenant();
+        tenant.setItemId("tenant-with-keys");
+        ApiKey apiKey = new ApiKey();
+        apiKey.setKeyHash("revoked-key");
+        apiKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
+        apiKey.setRevoked(true);
+        tenant.setApiKeys(new ArrayList<>(List.of(apiKey)));
+
+        when(persistenceService.getAllItems(Tenant.class)).thenReturn(List.of(tenant));
+
+        assertNull(tenantService.getTenantByApiKey("revoked-key"),
+                "A revoked key must not authenticate");
     }
 
     @Test
