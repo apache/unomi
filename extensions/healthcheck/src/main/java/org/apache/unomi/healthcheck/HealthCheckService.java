@@ -36,6 +36,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.unomi.healthcheck.HealthCheckConfig.CONFIG_AUTH_REALM;
 
@@ -49,7 +50,9 @@ public class HealthCheckService {
     private static final Logger LOGGER = LoggerFactory.getLogger(HealthCheckService.class.getName());
 
     private final List<HealthCheckProvider> providers = new CopyOnWriteArrayList<>();
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final AtomicInteger threadCount = new AtomicInteger();
+    private final ExecutorService executor = Executors.newCachedThreadPool(
+            r -> new Thread(r, "unomi-healthcheck-" + threadCount.incrementAndGet()));
     private final Object cacheLock = new Object();
     private volatile long cacheTimestamp = 0L;
     private volatile List<HealthCheckResponse> healthCache = Collections.emptyList();
@@ -180,8 +183,13 @@ public class HealthCheckService {
                     future.cancel(true);
                     LOGGER.warn("Health check {} timed out after {} ms", provider.name(), config.getTimeout());
                     health.add(provider.timeout());
+                } catch (InterruptedException e) {
+                    futures.forEach(f -> f.cancel(true));
+                    Thread.currentThread().interrupt();
+                    LOGGER.warn("Health check refresh interrupted, keeping the previous results");
+                    return;
                 } catch (Exception e) {
-                    LOGGER.error("Error while executing health check", e);
+                    LOGGER.error("Error while executing health check {}", provider.name(), e);
                     health.add(provider.timeout());
                 }
             }

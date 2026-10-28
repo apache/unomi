@@ -21,8 +21,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -76,6 +81,42 @@ class HealthCheckServiceTest {
 
         assertEquals(1, fast.calls.get());
         assertEquals(first, second);
+    }
+
+    @Test
+    void concurrentCallsOnAnExpiredCacheRefreshOnlyOnce() throws Exception {
+        TestProvider slow = new TestProvider("fast", () -> {
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            return HealthCheckResponse.live("fast");
+        });
+        service.bind(slow);
+        service.check();
+        Thread.sleep(1100);
+
+        int threads = 20;
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService callers = Executors.newFixedThreadPool(threads);
+        try {
+            List<Future<?>> calls = new ArrayList<>();
+            for (int i = 0; i < threads; i++) {
+                calls.add(callers.submit(() -> {
+                    start.await();
+                    return service.check();
+                }));
+            }
+            start.countDown();
+            for (Future<?> call : calls) {
+                call.get(5, TimeUnit.SECONDS);
+            }
+        } finally {
+            callers.shutdownNow();
+        }
+
+        assertEquals(2, slow.calls.get());
     }
 
     private HealthCheckResponse waitForever() {
