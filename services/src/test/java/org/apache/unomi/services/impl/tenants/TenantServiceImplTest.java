@@ -327,7 +327,7 @@ public class TenantServiceImplTest {
         apiKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
         tenantWithKeys.setApiKeys(new ArrayList<>(List.of(apiKey)));
 
-        when(persistenceService.getAllItems(Tenant.class)).thenReturn(List.of(tenantWithoutKeys, tenantWithKeys));
+        storeTenants(tenantWithoutKeys, tenantWithKeys);
 
         Tenant found = tenantService.getTenantByApiKey("valid-key");
         assertEquals("tenant-with-keys", found.getItemId(), "Should find tenant with matching API key");
@@ -347,7 +347,7 @@ public class TenantServiceImplTest {
         apiKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         tenantWithKeys.setApiKeys(new ArrayList<>(List.of(apiKey)));
 
-        when(persistenceService.getAllItems(Tenant.class)).thenReturn(List.of(tenantWithoutKeys, tenantWithKeys));
+        storeTenants(tenantWithoutKeys, tenantWithKeys);
 
         Tenant found = tenantService.getTenantByApiKey("valid-key", ApiKey.ApiKeyType.PRIVATE);
         assertEquals("tenant-with-keys", found.getItemId(), "Should find tenant with matching typed API key");
@@ -364,7 +364,7 @@ public class TenantServiceImplTest {
         apiKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
         tenant.setApiKeys(new ArrayList<>(List.of(apiKey)));
 
-        when(persistenceService.getAllItems(Tenant.class)).thenReturn(List.of(tenant));
+        storeTenants(tenant);
 
         assertNull(tenantService.getTenantByApiKey("wrong-key"),
                 "A key whose hash is not in the index should be rejected");
@@ -381,7 +381,7 @@ public class TenantServiceImplTest {
         apiKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
         tenant.setApiKeys(new ArrayList<>(List.of(apiKey)));
 
-        when(persistenceService.getAllItems(Tenant.class)).thenReturn(List.of(tenant));
+        storeTenants(tenant);
 
         Tenant found = tenantService.getTenantByApiKey("candidate-key");
         assertEquals("tenant-with-keys", found.getItemId(),
@@ -404,6 +404,7 @@ public class TenantServiceImplTest {
         apiKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
         tenant.setApiKeys(new ArrayList<>(List.of(apiKey)));
         tenantService.saveTenant(tenant);
+        when(persistenceService.load("fresh-tenant", Tenant.class)).thenReturn(tenant);
 
         assertEquals("fresh-tenant", tenantService.getTenantByApiKey("new-key").getItemId());
         verify(persistenceService, times(1)).getAllItems(Tenant.class);
@@ -419,10 +420,73 @@ public class TenantServiceImplTest {
         apiKey.setRevoked(true);
         tenant.setApiKeys(new ArrayList<>(List.of(apiKey)));
 
-        when(persistenceService.getAllItems(Tenant.class)).thenReturn(List.of(tenant));
+        storeTenants(tenant);
 
         assertNull(tenantService.getTenantByApiKey("revoked-key"),
                 "A revoked key must not authenticate");
+    }
+
+    @Test
+    public void getTenantByApiKeyRefusesKeyRevokedOnAnotherNodeBeforeRefresh() {
+        Tenant tenant = tenantWithKey("shared-key");
+        storeTenants(tenant);
+        assertEquals("acme", tenantService.getTenantByApiKey("shared-key").getItemId());
+
+        Tenant revokedElsewhere = tenantWithKey("shared-key");
+        revokedElsewhere.getApiKeys().get(0).setRevoked(true);
+        when(persistenceService.load("acme", Tenant.class)).thenReturn(revokedElsewhere);
+
+        assertNull(tenantService.getTenantByApiKey("shared-key"));
+        verify(persistenceService, times(1)).getAllItems(Tenant.class);
+    }
+
+    @Test
+    public void getTenantByApiKeyRefusesKeyOfDeletedTenant() {
+        Tenant tenant = tenantWithKey("doomed-key");
+        storeTenants(tenant);
+        assertEquals("acme", tenantService.getTenantByApiKey("doomed-key").getItemId());
+
+        tenantService.deleteTenant("acme");
+        when(persistenceService.load("acme", Tenant.class)).thenReturn(null);
+
+        assertNull(tenantService.getTenantByApiKey("doomed-key"));
+    }
+
+    @Test
+    public void getTenantByApiKeyFollowsKeyRotation() {
+        Tenant stored = tenantWithKey("old-hash");
+        storeTenants(stored);
+        assertEquals("acme", tenantService.getTenantByApiKey("old-hash").getItemId());
+
+        // The mocked hash is the identity, so the new key's hash is also its plaintext.
+        String newHash = tenantService.generateApiKeyWithType("acme", ApiKey.ApiKeyType.PUBLIC, null)
+                .getApiKey().getKeyHash();
+
+        assertNull(tenantService.getTenantByApiKey("old-hash"), "The replaced key must stop working");
+        assertEquals("acme", tenantService.getTenantByApiKey(newHash).getItemId(),
+                "The new key must work without waiting for a refresh");
+        verify(persistenceService, times(1)).getAllItems(Tenant.class);
+    }
+
+    @Test
+    public void getTenantByApiKeyStillWorksAfterSettingsUpdate() {
+        Tenant stored = tenantWithKey("kept-key");
+        storeTenants(stored);
+        assertEquals("acme", tenantService.getTenantByApiKey("kept-key").getItemId());
+        Tenant settings = new Tenant();
+        settings.setItemId("acme");
+
+        tenantService.updateTenantSettings(settings);
+
+        assertEquals("acme", tenantService.getTenantByApiKey("kept-key").getItemId());
+    }
+
+    /** Backs {@code getAllItems} and load-by-id with the given tenants. */
+    private void storeTenants(Tenant... tenants) {
+        when(persistenceService.getAllItems(Tenant.class)).thenReturn(List.of(tenants));
+        for (Tenant tenant : tenants) {
+            when(persistenceService.load(tenant.getItemId(), Tenant.class)).thenReturn(tenant);
+        }
     }
 
     @Test

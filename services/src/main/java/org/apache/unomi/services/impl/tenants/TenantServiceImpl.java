@@ -108,6 +108,7 @@ public class TenantServiceImpl implements TenantService {
         }
         apiKeyIndex = new TenantApiKeyIndex(
                 () -> executionContextManager.executeAsSystem(() -> persistenceService.getAllItems(Tenant.class)),
+                tenantId -> executionContextManager.executeAsSystem(() -> persistenceService.load(tenantId, Tenant.class)),
                 nanoClock);
     }
 
@@ -452,8 +453,8 @@ public class TenantServiceImpl implements TenantService {
         if (index == null) {
             return null;
         }
-        // Hash lookup stays outside executeAsSystem: the index loader already runs as system when it
-        // refreshes. Revoked and expired keys are refused inside the index.
+        // Hash lookup stays outside executeAsSystem: the index's loaders already run as system. A hit is
+        // confirmed against the tenant loaded by id, so revoked, expired and deleted keys are refused.
         return index.find(apiKey, keyType, secretHashService);
     }
 }

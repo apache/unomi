@@ -22,30 +22,33 @@ import org.apache.unomi.api.tenants.Tenant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 /**
- * In-memory map from API key hash to tenant, so {@link TenantServiceImpl#getTenantByApiKey} does not
+ * In-memory map from API key hash to tenant id, so {@link TenantServiceImpl#getTenantByApiKey} does not
  * load every tenant on each request (UNOMI-1016). Same refresh pattern as the tenant origins snapshot:
  * <ul>
- *     <li>Loaded in full on the first lookup (and on each periodic refresh).</li>
+ *     <li>Loaded in full on the first lookup; lookups made meanwhile wait for that first load.</li>
  *     <li>Updated in place when a tenant is saved or removed through this node.</li>
  *     <li>Reloaded in full every {@value #REFRESH_SECONDS} seconds by one request while others keep
- *     the current state, to pick up changes made on other nodes.</li>
+ *     the current state, to pick up keys created on other nodes.</li>
  *     <li>Reloaded on a miss at most every {@value #MISS_RELOAD_SECONDS} seconds.</li>
- *     <li>A tenant removed through this node is left out of full loads for {@value #REMOVED_SECONDS}
- *     seconds, until the store no longer returns it.</li>
  * </ul>
- * Key hashes are deterministic (SHA-256), so a plaintext key hashes to the same value as the stored
- * digest and resolves in one map lookup. Revoked and expired keys are refused at lookup time.
+ * The index only says which tenant a hash may belong to. A hit is confirmed against that tenant freshly
+ * loaded by id, so a key revoked, rotated or expired — or a tenant deleted — on any node is refused on
+ * the next request, not on the next refresh. Key hashes are deterministic (SHA-256), so a plaintext key
+ * hashes to the same value as the stored digest.
  */
 final class TenantApiKeyIndex {
 
@@ -53,42 +56,33 @@ final class TenantApiKeyIndex {
 
     static final int REFRESH_SECONDS = 30;
     static final int MISS_RELOAD_SECONDS = 5;
-    /**
-     * How long a tenant removed through this node stays excluded from full loads. The tenant service
-     * notifies listeners before it deletes, so a load in between would otherwise bring the tenant back.
-     */
-    static final int REMOVED_SECONDS = 60;
-
-    /** One consistent view; replaced as a whole. */
-    static final class State {
-        static final State EMPTY = new State(Collections.emptyMap(), Collections.emptyMap());
-
-        /** Tenant id → tenant as last loaded or saved on this node. */
-        final Map<String, Tenant> tenantsById;
-        /** Key hash → tenant id. Duplicate hashes keep the last tenant seen when rebuilding. */
-        final Map<String, String> tenantIdByKeyHash;
-
-        State(Map<String, Tenant> tenantsById, Map<String, String> tenantIdByKeyHash) {
-            this.tenantsById = tenantsById;
-            this.tenantIdByKeyHash = tenantIdByKeyHash;
-        }
-    }
 
     private final Supplier<List<Tenant>> loader;
+    private final Function<String, Tenant> tenantById;
     private final LongSupplier clock;
-    private final ReentrantLock lock = new ReentrantLock();
+    /** Serializes full loads. Not held by saves and removals, so they never wait on a slow load. */
+    private final ReentrantLock loadLock = new ReentrantLock();
+    /** Guards {@link #tenantIdByKeyHash} updates and {@link #changesDuringLoad}. */
+    private final Object stateLock = new Object();
 
-    private volatile State state = State.EMPTY;
-    /** Tenants removed through this node, and until when loads skip them; guarded by {@link #lock}. */
-    private final Map<String, Long> removedUntil = new HashMap<>();
+    /** Key hash → tenant id; replaced as a whole. Duplicate hashes keep the last tenant seen. */
+    private volatile Map<String, String> tenantIdByKeyHash = Collections.emptyMap();
+    /**
+     * Saves (id → key hashes) and removals (id → {@code null}) made while a full load runs, reapplied on
+     * top of its result so a load that read the store before them cannot undo them. {@code null} when no
+     * load is running; guarded by {@link #stateLock}.
+     */
+    private Map<String, List<String>> changesDuringLoad;
+    private volatile boolean loaded;
     private volatile boolean attempted;
-    /** When the next periodic reload is due; meaningful once {@link #attempted}. */
+    /** When the next periodic reload is due; meaningful once {@link #loaded}. */
     private volatile long nextRefreshAt;
     /** When the last full load was tried; meaningful once {@link #attempted}. */
     private volatile long lastAttemptAt;
 
-    TenantApiKeyIndex(Supplier<List<Tenant>> loader, LongSupplier clock) {
+    TenantApiKeyIndex(Supplier<List<Tenant>> loader, Function<String, Tenant> tenantById, LongSupplier clock) {
         this.loader = loader;
+        this.tenantById = tenantById;
         this.clock = clock;
     }
 
@@ -105,21 +99,20 @@ final class TenantApiKeyIndex {
             return null;
         }
         String keyHash = hashService.hash(plainTextKey);
-        Tenant found = resolve(current(), keyHash, keyType);
-        if (found != null) {
-            return found;
+        String tenantId = current().get(keyHash);
+        if (tenantId == null) {
+            tenantId = afterMiss().get(keyHash);
         }
-        return resolve(afterMiss(), keyHash, keyType);
-    }
-
-    private static Tenant resolve(State state, String keyHash, ApiKey.ApiKeyType keyType) {
-        String tenantId = state.tenantIdByKeyHash.get(keyHash);
         if (tenantId == null) {
             return null;
         }
-        Tenant tenant = state.tenantsById.get(tenantId);
+        Tenant tenant = tenantById.apply(tenantId);
+        return accepts(tenant, keyHash, keyType) ? tenant : null;
+    }
+
+    private static boolean accepts(Tenant tenant, String keyHash, ApiKey.ApiKeyType keyType) {
         if (tenant == null || tenant.getApiKeys() == null) {
-            return null;
+            return false;
         }
         Date now = new Date();
         for (ApiKey apiKey : tenant.getApiKeys()) {
@@ -135,37 +128,50 @@ final class TenantApiKeyIndex {
             if (apiKey.getExpirationDate() != null && !apiKey.getExpirationDate().after(now)) {
                 continue;
             }
-            return tenant;
+            return true;
         }
-        return null;
+        return false;
     }
 
-    /** The current state, refreshed first if the periodic reload is due. */
-    State current() {
-        if (!attempted || clock.getAsLong() - nextRefreshAt >= 0) {
+    /**
+     * The current hash → tenant id map. Until a first load has succeeded, waits for one (trying again at
+     * most every {@value #MISS_RELOAD_SECONDS} seconds); afterwards refreshes first if the periodic
+     * reload is due, without waiting for a reload another request is running.
+     */
+    Map<String, String> current() {
+        if (!loaded) {
+            loadLock.lock();
+            try {
+                if (!loaded && (!attempted || clock.getAsLong() - lastAttemptAt >= TimeUnit.SECONDS.toNanos(MISS_RELOAD_SECONDS))) {
+                    doLoad();
+                }
+            } finally {
+                loadLock.unlock();
+            }
+        } else if (clock.getAsLong() - nextRefreshAt >= 0) {
             tryReload();
         }
-        return state;
+        return tenantIdByKeyHash;
     }
 
     /**
      * Reloads now unless a full load was tried in the last {@value #MISS_RELOAD_SECONDS} seconds or
-     * another reload is running, and returns the resulting state.
+     * another reload is running, and returns the resulting map.
      */
-    State afterMiss() {
+    Map<String, String> afterMiss() {
         if (!attempted || clock.getAsLong() - lastAttemptAt >= TimeUnit.SECONDS.toNanos(MISS_RELOAD_SECONDS)) {
             tryReload();
         }
-        return state;
+        return tenantIdByKeyHash;
     }
 
     /** Full load, waiting for any reload in progress. Useful from tests. */
     void load() {
-        lock.lock();
+        loadLock.lock();
         try {
             doLoad();
         } finally {
-            lock.unlock();
+            loadLock.unlock();
         }
     }
 
@@ -174,89 +180,92 @@ final class TenantApiKeyIndex {
         if (tenant == null || tenant.getItemId() == null) {
             return;
         }
-        lock.lock();
-        try {
-            removedUntil.remove(tenant.getItemId());
-            State previous = state;
-            Map<String, Tenant> tenantsById = new HashMap<>(previous.tenantsById);
-            Map<String, String> byHash = new HashMap<>(previous.tenantIdByKeyHash);
-            removeHashesForTenant(tenant.getItemId(), byHash);
-            put(tenant, tenantsById, byHash);
-            state = new State(Collections.unmodifiableMap(tenantsById), Collections.unmodifiableMap(byHash));
-        } finally {
-            lock.unlock();
-        }
+        applyChange(tenant.getItemId(), hashesOf(tenant));
     }
 
-    /** A tenant was removed: drop it, whether or not it is still in the store. */
+    /** A tenant was removed through this node: drop its key hashes. */
     void tenantRemoved(String tenantId) {
         if (tenantId == null) {
             return;
         }
-        lock.lock();
-        try {
-            removedUntil.put(tenantId, clock.getAsLong() + TimeUnit.SECONDS.toNanos(REMOVED_SECONDS));
-            State previous = state;
-            if (!previous.tenantsById.containsKey(tenantId)) {
-                return;
+        applyChange(tenantId, null);
+    }
+
+    private void applyChange(String tenantId, List<String> hashes) {
+        synchronized (stateLock) {
+            Map<String, String> byHash = new HashMap<>(tenantIdByKeyHash);
+            replaceHashes(byHash, tenantId, hashes);
+            tenantIdByKeyHash = Collections.unmodifiableMap(byHash);
+            if (changesDuringLoad != null) {
+                changesDuringLoad.put(tenantId, hashes);
             }
-            Map<String, Tenant> tenantsById = new HashMap<>(previous.tenantsById);
-            Map<String, String> byHash = new HashMap<>(previous.tenantIdByKeyHash);
-            tenantsById.remove(tenantId);
-            removeHashesForTenant(tenantId, byHash);
-            state = new State(Collections.unmodifiableMap(tenantsById), Collections.unmodifiableMap(byHash));
-        } finally {
-            lock.unlock();
         }
     }
 
     private void tryReload() {
-        if (lock.tryLock()) {
+        if (loadLock.tryLock()) {
             try {
                 doLoad();
             } finally {
-                lock.unlock();
+                loadLock.unlock();
             }
         }
     }
 
+    /** Runs with {@link #loadLock} held. */
     private void doLoad() {
         long now = clock.getAsLong();
         attempted = true;
         lastAttemptAt = now;
+        synchronized (stateLock) {
+            changesDuringLoad = new LinkedHashMap<>();
+        }
         try {
             List<Tenant> tenants = loader.get();
-            removedUntil.values().removeIf(until -> now - until >= 0);
-            Map<String, Tenant> tenantsById = new HashMap<>();
             Map<String, String> byHash = new HashMap<>();
             for (Tenant tenant : tenants) {
-                if (tenant != null && tenant.getItemId() != null && !removedUntil.containsKey(tenant.getItemId())) {
-                    put(tenant, tenantsById, byHash);
+                if (tenant != null && tenant.getItemId() != null) {
+                    for (String hash : hashesOf(tenant)) {
+                        byHash.put(hash, tenant.getItemId());
+                    }
                 }
             }
-            state = new State(Collections.unmodifiableMap(tenantsById), Collections.unmodifiableMap(byHash));
+            synchronized (stateLock) {
+                changesDuringLoad.forEach((tenantId, hashes) -> replaceHashes(byHash, tenantId, hashes));
+                changesDuringLoad = null;
+                tenantIdByKeyHash = Collections.unmodifiableMap(byHash);
+            }
+            loaded = true;
             nextRefreshAt = now + TimeUnit.SECONDS.toNanos(REFRESH_SECONDS);
         } catch (RuntimeException e) {
+            synchronized (stateLock) {
+                changesDuringLoad = null;
+            }
             nextRefreshAt = now + TimeUnit.SECONDS.toNanos(MISS_RELOAD_SECONDS);
             LOGGER.warn("Could not load the API key → tenant index; keeping the previous one: {}", e.getMessage());
             LOGGER.debug("API key index load failure", e);
         }
     }
 
-    private static void put(Tenant tenant, Map<String, Tenant> tenantsById, Map<String, String> byHash) {
-        String id = tenant.getItemId();
-        tenantsById.put(id, tenant);
-        if (tenant.getApiKeys() == null) {
-            return;
-        }
-        for (ApiKey apiKey : tenant.getApiKeys()) {
-            if (apiKey != null && apiKey.getKeyHash() != null) {
-                byHash.put(apiKey.getKeyHash(), id);
+    private static List<String> hashesOf(Tenant tenant) {
+        List<String> hashes = new ArrayList<>();
+        if (tenant.getApiKeys() != null) {
+            for (ApiKey apiKey : tenant.getApiKeys()) {
+                if (apiKey != null && apiKey.getKeyHash() != null) {
+                    hashes.add(apiKey.getKeyHash());
+                }
             }
         }
+        return hashes;
     }
 
-    private static void removeHashesForTenant(String tenantId, Map<String, String> byHash) {
-        byHash.entrySet().removeIf(entry -> tenantId.equals(entry.getValue()));
+    /** Drops the tenant's hashes, then maps {@code hashes} to it; {@code null} means the tenant is gone. */
+    private static void replaceHashes(Map<String, String> byHash, String tenantId, List<String> hashes) {
+        byHash.values().removeIf(tenantId::equals);
+        if (hashes != null) {
+            for (String hash : hashes) {
+                byHash.put(hash, tenantId);
+            }
+        }
     }
 }

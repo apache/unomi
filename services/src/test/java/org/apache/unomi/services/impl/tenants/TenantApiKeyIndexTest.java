@@ -26,21 +26,32 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TenantApiKeyIndexTest {
 
     private static final long REFRESH = TimeUnit.SECONDS.toNanos(TenantApiKeyIndex.REFRESH_SECONDS);
     private static final long MISS = TimeUnit.SECONDS.toNanos(TenantApiKeyIndex.MISS_RELOAD_SECONDS);
 
-    private final List<Tenant> tenants = new ArrayList<>();
+    private final List<Tenant> tenants = new CopyOnWriteArrayList<>();
     private final AtomicInteger loads = new AtomicInteger();
     private volatile RuntimeException failure;
+    /** When set, a full load blocks on it after reading {@link #tenants}. */
+    private volatile CountDownLatch loadGate;
+    /** Counted down once a full load has read {@link #tenants}. */
+    private volatile CountDownLatch loadRead;
     private final long[] now = {TimeUnit.DAYS.toNanos(3)};
     private final SecretHashService hashService = new SecretHashServiceImpl();
     private TenantApiKeyIndex index;
@@ -53,8 +64,19 @@ class TenantApiKeyIndexTest {
             if (failure != null) {
                 throw failure;
             }
-            return new ArrayList<>(tenants);
-        }, () -> now[0]);
+            List<Tenant> read = new ArrayList<>(tenants);
+            if (loadRead != null) {
+                loadRead.countDown();
+            }
+            if (loadGate != null) {
+                try {
+                    loadGate.await(10, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            return read;
+        }, this::byId, () -> now[0]);
     }
 
     @Test
@@ -111,6 +133,7 @@ class TenantApiKeyIndexTest {
     void tenantSavedUpdatesIndexImmediately() {
         index.load();
         Tenant updated = tenantWithKey("acme", "rotated-key", ApiKey.ApiKeyType.PUBLIC);
+        tenants.set(0, updated);
         index.tenantSaved(updated);
 
         assertNull(index.find("plain-public", null, hashService));
@@ -122,22 +145,77 @@ class TenantApiKeyIndexTest {
     void tenantRemovedDropsKeysImmediately() {
         index.load();
         index.tenantRemoved("acme");
-        assertNull(index.find("plain-public", null, hashService));
-        assertEquals(1, loads.get());
+        assertNull(index.current().get(hashService.hash("plain-public")));
     }
 
     @Test
-    void refusesRevokedAndExpiredKeys() {
+    void refusesKeysRevokedExpiredOrDeletedOnAnotherNodeWithoutWaitingForRefresh() {
         index.load();
         Tenant revoked = tenantWithKey("acme", "plain-public", ApiKey.ApiKeyType.PUBLIC);
         revoked.getApiKeys().get(0).setRevoked(true);
-        index.tenantSaved(revoked);
+        tenants.set(0, revoked);
         assertNull(index.find("plain-public", null, hashService));
 
         Tenant expired = tenantWithKey("acme", "plain-public", ApiKey.ApiKeyType.PUBLIC);
         expired.getApiKeys().get(0).setExpirationDate(new Date(System.currentTimeMillis() - 60_000));
-        index.tenantSaved(expired);
+        tenants.set(0, expired);
         assertNull(index.find("plain-public", null, hashService));
+
+        tenants.clear();
+        assertNull(index.find("plain-public", null, hashService));
+        assertEquals(1, loads.get(), "Refusals must come from the tenant loaded by id, not a refresh");
+    }
+
+    @Test
+    void lookupsDuringFirstLoadWaitForIt() throws Exception {
+        loadGate = new CountDownLatch(1);
+        loadRead = new CountDownLatch(1);
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try {
+            Future<Tenant> first = pool.submit(() -> index.find("plain-public", null, hashService));
+            assertTrue(loadRead.await(10, TimeUnit.SECONDS));
+            AtomicReference<Tenant> second = new AtomicReference<>();
+            Thread waiter = new Thread(() -> second.set(index.find("plain-public", null, hashService)));
+            waiter.start();
+            // The second lookup must block on the first load rather than answer from the empty index.
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            while (waiter.getState() != Thread.State.WAITING && waiter.isAlive() && System.nanoTime() < deadline) {
+                Thread.sleep(5);
+            }
+            assertTrue(waiter.isAlive(), "Second lookup answered before the first load finished");
+            loadGate.countDown();
+            waiter.join(10_000);
+            assertEquals("acme", first.get(10, TimeUnit.SECONDS).getItemId());
+            assertEquals("acme", second.get().getItemId());
+            assertEquals(1, loads.get());
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void savesAndRemovalsDuringALoadAreNotUndoneByIt() throws Exception {
+        index.load();
+        loadGate = new CountDownLatch(1);
+        loadRead = new CountDownLatch(1);
+        now[0] += REFRESH;
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try {
+            Future<?> reload = pool.submit(() -> index.current());
+            assertTrue(loadRead.await(10, TimeUnit.SECONDS));
+            // The reload has read the store; these must neither wait for it nor be lost when it finishes.
+            Tenant beta = tenantWithKey("beta", "beta-key", ApiKey.ApiKeyType.PUBLIC);
+            tenants.add(beta);
+            index.tenantSaved(beta);
+            index.tenantRemoved("acme");
+            loadGate.countDown();
+            reload.get(10, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
+        assertEquals(2, loads.get());
+        assertEquals("beta", index.current().get(hashService.hash("beta-key")));
+        assertNull(index.current().get(hashService.hash("plain-public")));
     }
 
     @Test
@@ -148,6 +226,10 @@ class TenantApiKeyIndexTest {
         index.current();
         assertEquals(2, loads.get());
         assertEquals("acme", index.find("plain-public", null, hashService).getItemId());
+    }
+
+    private Tenant byId(String id) {
+        return tenants.stream().filter(t -> id.equals(t.getItemId())).findFirst().orElse(null);
     }
 
     private Tenant tenantWithKey(String id, String plainTextKey, ApiKey.ApiKeyType type) {
