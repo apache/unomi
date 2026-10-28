@@ -424,6 +424,12 @@ curl -X POST "http://localhost:8181/cxs/tenants/my-tenant/apikeys?type=PRIVATE" 
 
 NOTE: `type` must be `PUBLIC` or `PRIVATE`. Optional `validityDays` sets expiration; omit it (or use `0`) for no expiration.
 
+When a key change takes effect:
+
+* A new key works at once on the node that generated it. Other nodes accept it on its first request, or within a few seconds.
+* The key it replaces is refused at once on every node, as are revoked and expired keys and the keys of a deleted tenant.
+* While a node that has just started reads its tenants, it refuses API keys with `401` instead of making requests wait. Clients should retry.
+
 ===== Deleting a Tenant
 
 [source,bash]
@@ -530,6 +536,7 @@ See <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>> and <<_shell_commands,S
 * Verify API key is correct
 * Check if using public key for private endpoint
 * Ensure tenant ID matches the API key
+* If the key was just generated on another node, or this node has just started, retry after a few seconds
 
 ====== 400 Bad Request
 * Check if API key header is present
