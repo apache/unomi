@@ -67,6 +67,13 @@ public class TenantServiceImpl implements TenantService {
     private PersistenceService persistenceService;
     private ExecutionContextManager executionContextManager;
     private SecretHashService secretHashService;
+    /**
+     * Hash → tenant index for {@link #getTenantByApiKey}. Built once persistence and the execution
+     * context manager are set. Package-visible so unit tests can drive refresh timing.
+     */
+    TenantApiKeyIndex apiKeyIndex;
+    private long apiKeyRefreshInterval = TenantApiKeyIndex.DEFAULT_REFRESH_INTERVAL_MILLIS;
+    private long apiKeyMissRefreshInterval = TenantApiKeyIndex.DEFAULT_MISS_REFRESH_INTERVAL_MILLIS;
 
     /**
      * Sets the persistence service via Blueprint dependency injection.
@@ -75,6 +82,7 @@ public class TenantServiceImpl implements TenantService {
      */
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
+        rebuildApiKeyIndex();
     }
 
     /**
@@ -84,6 +92,7 @@ public class TenantServiceImpl implements TenantService {
      */
     public void setExecutionContextManager(ExecutionContextManager executionContextManager) {
         this.executionContextManager = executionContextManager;
+        rebuildApiKeyIndex();
     }
 
     /**
@@ -93,6 +102,62 @@ public class TenantServiceImpl implements TenantService {
      */
     public void setSecretHashService(SecretHashService secretHashService) {
         this.secretHashService = secretHashService;
+    }
+
+    /**
+     * How often, in milliseconds, the API key index is reloaded in full to pick up keys created on other
+     * nodes ({@code tenant.apikey.refresh.interval}).
+     *
+     * @param apiKeyRefreshInterval a positive interval; anything else keeps the default
+     */
+    public void setApiKeyRefreshInterval(long apiKeyRefreshInterval) {
+        this.apiKeyRefreshInterval = positiveOrDefault("tenant.apikey.refresh.interval", apiKeyRefreshInterval,
+                TenantApiKeyIndex.DEFAULT_REFRESH_INTERVAL_MILLIS);
+        rebuildApiKeyIndex();
+    }
+
+    /**
+     * Minimum time, in milliseconds, between API key index reloads triggered by unknown keys
+     * ({@code tenant.apikey.miss.refresh.interval}). Bounds the load requests with invalid keys can cause.
+     *
+     * @param apiKeyMissRefreshInterval a positive interval; anything else keeps the default
+     */
+    public void setApiKeyMissRefreshInterval(long apiKeyMissRefreshInterval) {
+        this.apiKeyMissRefreshInterval = positiveOrDefault("tenant.apikey.miss.refresh.interval", apiKeyMissRefreshInterval,
+                TenantApiKeyIndex.DEFAULT_MISS_REFRESH_INTERVAL_MILLIS);
+        rebuildApiKeyIndex();
+    }
+
+    private static long positiveOrDefault(String name, long value, long defaultValue) {
+        if (value > 0) {
+            return value;
+        }
+        LOGGER.warn("{} must be a positive number of milliseconds, got {}; using {}", name, value, defaultValue);
+        return defaultValue;
+    }
+
+    private void rebuildApiKeyIndex() {
+        if (persistenceService == null || executionContextManager == null) {
+            return;
+        }
+        apiKeyIndex = new TenantApiKeyIndex(
+                () -> executionContextManager.executeAsSystem(() -> persistenceService.getAllItems(Tenant.class)),
+                tenantId -> executionContextManager.executeAsSystem(() -> persistenceService.load(tenantId, Tenant.class)),
+                nanoClock, apiKeyRefreshInterval, apiKeyMissRefreshInterval);
+    }
+
+    private void notifyApiKeyIndexSaved(Tenant tenant) {
+        TenantApiKeyIndex index = apiKeyIndex;
+        if (index != null) {
+            index.tenantSaved(tenant);
+        }
+    }
+
+    private void notifyApiKeyIndexRemoved(String tenantId) {
+        TenantApiKeyIndex index = apiKeyIndex;
+        if (index != null) {
+            index.tenantRemoved(tenantId);
+        }
     }
 
     /**
@@ -227,6 +292,7 @@ public class TenantServiceImpl implements TenantService {
                 // Roll back rather than leave a partially-initialized tenant (e.g. missing its
                 // private key) persisted after a failure partway through key generation.
                 persistenceService.remove(tenant.getItemId(), Tenant.class);
+                notifyApiKeyIndexRemoved(tenant.getItemId());
                 throw e;
             }
 
@@ -237,6 +303,7 @@ public class TenantServiceImpl implements TenantService {
             if (reloadedTenant == null) {
                 throw new IllegalStateException("Failed to reload tenant after creation: " + tenant.getItemId());
             }
+            notifyApiKeyIndexSaved(reloadedTenant);
             return reloadedTenant;
         });
     }
@@ -277,6 +344,7 @@ public class TenantServiceImpl implements TenantService {
                 if (persistenceService.save(tenant, false, false)) {
                     persistenceService.refreshIndex(Tenant.class);
                     invalidateGetOrCreateCache(tenantId);
+                    notifyApiKeyIndexSaved(tenant);
                     break;
                 }
                 if (attempt == WRITE_ATTEMPTS) {
@@ -307,6 +375,7 @@ public class TenantServiceImpl implements TenantService {
         });
         if (tenant != null) {
             invalidateGetOrCreateCache(tenant.getItemId());
+            notifyApiKeyIndexSaved(tenant);
         }
     }
 
@@ -339,6 +408,9 @@ public class TenantServiceImpl implements TenantService {
             throw new ConcurrentModificationException("Tenant " + tenantId + " kept changing while its settings were being updated");
         });
         invalidateGetOrCreateCache(tenantId);
+        if (saved != null) {
+            notifyApiKeyIndexSaved(saved);
+        }
         return saved;
     }
 
@@ -361,6 +433,7 @@ public class TenantServiceImpl implements TenantService {
             persistenceService.refreshIndex(Tenant.class);
         });
         invalidateGetOrCreateCache(tenantId);
+        notifyApiKeyIndexRemoved(tenantId);
     }
 
     @Override
@@ -410,13 +483,12 @@ public class TenantServiceImpl implements TenantService {
 
     @Override
     public Tenant getTenantByApiKey(String apiKey, ApiKey.ApiKeyType keyType) {
-        return executionContextManager.executeAsSystem(() -> {
-            List<Tenant> tenants = persistenceService.getAllItems(Tenant.class);
-            return tenants.stream()
-                .filter(tenant -> tenant.getApiKeys() != null && tenant.getApiKeys().stream()
-                    .anyMatch(key -> (keyType == null || key.getKeyType() == keyType) && matchesKey(key, apiKey)))
-                .findFirst()
-                .orElse(null);
-        });
+        TenantApiKeyIndex index = apiKeyIndex;
+        if (index == null) {
+            return null;
+        }
+        // Hash lookup stays outside executeAsSystem: the index's loaders already run as system. A hit is
+        // confirmed against the tenant loaded by id, so revoked, expired and deleted keys are refused.
+        return index.find(apiKey, keyType, secretHashService);
     }
 }

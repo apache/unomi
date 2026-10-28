@@ -160,7 +160,7 @@ public interface TenantService {
      * Retrieves a tenant by its API key.
      *
      * @param key the API key to look up
-     * @return the Tenant object if found, null otherwise
+     * @return the Tenant object if found, null otherwise, including when the key is revoked or expired
      */
     Tenant getTenantByApiKey(String key);
 
@@ -169,7 +169,8 @@ public interface TenantService {
      *
      * @param key the API key to look up
      * @param requiredType the required type of the API key (PUBLIC or PRIVATE)
-     * @return the Tenant object if found and key type matches, null otherwise
+     * @return the Tenant object if found and key type matches, null otherwise, including when the key is
+     * revoked or expired
      */
     Tenant getTenantByApiKey(String key, ApiKey.ApiKeyType requiredType);
 

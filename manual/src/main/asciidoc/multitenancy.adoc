@@ -424,6 +424,23 @@ curl -X POST "http://localhost:8181/cxs/tenants/my-tenant/apikeys?type=PRIVATE" 
 
 NOTE: `type` must be `PUBLIC` or `PRIVATE`. Optional `validityDays` sets expiration; omit it (or use `0`) for no expiration.
 
+When a key change takes effect:
+
+* A new key works at once on the node that generated it. Other nodes accept it on its first request, or at the latest after the miss refresh interval below (5 seconds by default).
+* The key it replaces is refused at once on every node, as are revoked and expired keys and the keys of a deleted tenant.
+* While a node that has just started reads its tenants, it refuses API keys with `401` instead of making requests wait. Clients should retry.
+
+Two settings control how other nodes learn about new keys:
+
+[options="header"]
+|===
+|Property |Environment variable |Default |Meaning
+|`org.apache.unomi.tenant.apikey.refresh.interval` |`UNOMI_TENANT_APIKEY_REFRESH_INTERVAL` |`30000` |How often, in milliseconds, each node reloads its list of API keys.
+|`org.apache.unomi.tenant.apikey.miss.refresh.interval` |`UNOMI_TENANT_APIKEY_MISS_REFRESH_INTERVAL` |`5000` |Minimum time, in milliseconds, between reloads triggered by unknown keys. Lower values let a key created on another node work sooner, but each reload reads every tenant, so this also limits the load that requests with wrong keys can cause.
+|===
+
+Set them in `etc/custom.system.properties` or through the environment variables; they must be positive and are read at startup. They never delay refusing a revoked, replaced or expired key.
+
 ===== Deleting a Tenant
 
 [source,bash]
@@ -530,6 +547,7 @@ See <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>> and <<_shell_commands,S
 * Verify API key is correct
 * Check if using public key for private endpoint
 * Ensure tenant ID matches the API key
+* If the key was just generated on another node, or this node has just started, retry after a few seconds
 
 ====== 400 Bad Request
 * Check if API key header is present
