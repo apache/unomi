@@ -104,6 +104,12 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     protected final Map<Long, List<PluginType>> pluginTypes = new ConcurrentHashMap<>();
 
     /**
+     * IDs of the bundles whose predefined items are loaded. A bundle that starts during the startup
+     * scan is seen both by the scan and by the bundle listener; this set makes the second one a no-op.
+     */
+    private final Set<Long> loadedBundleIds = ConcurrentHashMap.newKeySet();
+
+    /**
      * Map tracking scheduled tasks for cache refreshes.
      * Key is the task name, value is the ScheduledTask instance.
      */
@@ -163,25 +169,27 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     }
 
     /**
-     * Initializes caches, loads predefined items from bundles, registers a bundle listener,
-     * loads initial persistence data, and starts refresh timers.
+     * Initializes caches, registers a bundle listener, loads predefined items from the bundles
+     * already started, loads initial persistence data, and starts refresh timers.
      */
     public void postConstruct() {
         logger.debug("postConstruct {{}}", bundleContext.getBundle());
 
-        // Initialize caches and load predefined items
         initializeCaches();
-        loadPredefinedItems(bundleContext);
+        loadedBundleIds.clear();
 
-        // Process existing bundles
+        // Listen before scanning: a bundle that starts while the scan runs (other bundles keep
+        // starting on the Karaf feature thread) is then either scanned or notified, never missed.
+        bundleContext.addBundleListener(this);
+
+        // Load predefined items from this bundle, then from the bundles already started
+        loadPredefinedItems(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
             if (bundle.getBundleContext() != null &&
                 bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
                 loadPredefinedItems(bundle.getBundleContext());
             }
         }
-
-        bundleContext.addBundleListener(this);
 
         // Load initial data for all types before starting timers
         loadInitialDataForAllTypes();
@@ -218,6 +226,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
      */
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
+        loadedBundleIds.clear();
         shutdownTimers();
         logger.debug("{} service shutdown.", getClass().getSimpleName());
     }
@@ -600,11 +609,13 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
 
     /**
      * Loads predefined JSON items from bundle resources for all configured types.
+     * Does nothing if the bundle's items are already loaded and the bundle has not stopped since.
      *
      * @param bundleContext the bundle context used to discover predefined resources
      */
     protected void loadPredefinedItems(BundleContext bundleContext) {
         if (bundleContext == null) return;
+        if (!loadedBundleIds.add(bundleContext.getBundle().getBundleId())) return;
 
         for (CacheableTypeConfig<?> config : getTypeConfigs()) {
             if (config.hasPredefinedItems()) {
@@ -812,6 +823,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
             // Clean up the tracking maps
             pluginContributions.remove(bundleId);
             pluginTypes.remove(bundleId);
+            loadedBundleIds.remove(bundleId);
         }
     }
 
