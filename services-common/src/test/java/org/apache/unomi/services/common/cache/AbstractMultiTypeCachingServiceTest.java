@@ -42,8 +42,13 @@ import java.net.URL;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -641,10 +646,108 @@ public class AbstractMultiTypeCachingServiceTest {
         verify(cacheService, times(2)).put(eq(TEST_ITEM_TYPE), eq("predefined"), eq(SYSTEM_TENANT), any(TestSerializable.class));
     }
 
+    /**
+     * UNOMI-1028 with real threads: the startup scan runs on one thread while a plugin bundle starts
+     * on another at a random moment, as the Blueprint extender and Karaf feature threads do. Like the
+     * OSGi framework, the starter makes the bundle active before notifying the listeners registered at
+     * that time. Every round must load the plugin's items exactly once.
+     */
+    @Test
+    public void testBundleStartingConcurrentlyWithStartupScanLoadsExactlyOnce() throws Exception {
+        final int rounds = 300;
+        // Bundles the scan walks after the plugin, about a microsecond each (the real scan reads JSON),
+        // so that the plugin can start while the rest of the scan runs.
+        final int laterBundles = 200;
+
+        ExecutionContextManager systemContext = mock(ExecutionContextManager.class, withSettings().stubOnly());
+        doAnswer(invocation -> ((Supplier<?>) invocation.getArgument(0)).get())
+                .when(systemContext).executeAsSystem(any(Supplier.class));
+        MultiTypeCacheService cache = mock(MultiTypeCacheService.class, withSettings().stubOnly());
+
+        File jsonFile = File.createTempFile("predefined", ".json");
+        jsonFile.deleteOnExit();
+        URL json = jsonFile.toURI().toURL();
+        AtomicBoolean pluginStarted = new AtomicBoolean();
+        Bundle plugin = mock(Bundle.class, withSettings().stubOnly());
+        BundleContext pluginContext = mock(BundleContext.class, withSettings().stubOnly());
+        when(pluginContext.getBundle()).thenReturn(plugin);
+        when(plugin.getBundleId()).thenReturn(2L);
+        when(plugin.getBundleContext()).thenAnswer(invocation -> pluginStarted.get() ? pluginContext : null);
+        when(plugin.findEntries(eq("META-INF/cxs/test"), eq("*.json"), eq(true)))
+                .thenAnswer(invocation -> Collections.enumeration(Collections.singletonList(json)));
+        Bundle resolvedBundle = mock(Bundle.class, withSettings().stubOnly());
+        when(resolvedBundle.getBundleContext()).thenAnswer(invocation -> {
+            spinFor(1_000);
+            return null;
+        });
+
+        // One service, restarted every round: creating mocks per round would dominate the run time.
+        BundleLoadingService service = new BundleLoadingService();
+        service.setContextManager(systemContext);
+        service.setCacheService(cache);
+        Bundle[] bundles = new Bundle[laterBundles + 2];
+        bundles[0] = service.serviceContext.getBundle();
+        bundles[1] = plugin;
+        Arrays.fill(bundles, 2, bundles.length, resolvedBundle);
+        AtomicBoolean scanStarted = new AtomicBoolean();
+        when(service.serviceContext.getBundles()).thenAnswer(invocation -> {
+            scanStarted.set(true);
+            return bundles;
+        });
+
+        ExecutorService starter = Executors.newSingleThreadExecutor();
+        int missed = 0;
+        int loadedTwice = 0;
+        try {
+            for (int round = 0; round < rounds; round++) {
+                service.preDestroy();
+                service.loads.set(0);
+                pluginStarted.set(false);
+                scanStarted.set(false);
+
+                // Start the plugin somewhere between the scan's start and shortly after its end.
+                long delayNanos = ThreadLocalRandom.current().nextLong(TimeUnit.MICROSECONDS.toNanos(300));
+                Future<?> start = starter.submit(() -> {
+                    // Spin rather than block: waking a parked thread takes longer than the scan.
+                    while (!scanStarted.get()) {
+                        Thread.onSpinWait();
+                    }
+                    spinFor(delayNanos);
+                    pluginStarted.set(true);
+                    for (BundleListener listener : service.listeners) {
+                        listener.bundleChanged(new BundleEvent(BundleEvent.STARTED, plugin));
+                    }
+                    return null;
+                });
+                service.postConstruct();
+                start.get(5, TimeUnit.SECONDS);
+
+                if (service.loads.get() == 0) {
+                    missed++;
+                } else if (service.loads.get() > 1) {
+                    loadedTwice++;
+                }
+            }
+        } finally {
+            starter.shutdownNow();
+        }
+
+        assertEquals("rounds where the plugin's items were never loaded", 0, missed);
+        assertEquals("rounds where the plugin's items were loaded twice", 0, loadedTwice);
+    }
+
+    private static void spinFor(long nanos) {
+        long until = System.nanoTime() + nanos;
+        while (System.nanoTime() < until) {
+            Thread.onSpinWait();
+        }
+    }
+
     /** Service whose only type loads one predefined item per bundle, from {@code META-INF/cxs/test}. */
     private static class BundleLoadingService extends AbstractMultiTypeCachingService {
         final BundleContext serviceContext = mock(BundleContext.class);
         final List<BundleListener> listeners = new CopyOnWriteArrayList<>();
+        final AtomicInteger loads = new AtomicInteger();
 
         BundleLoadingService() {
             Bundle serviceBundle = mock(Bundle.class);
@@ -653,6 +756,8 @@ public class AbstractMultiTypeCachingServiceTest {
             when(serviceContext.getBundle()).thenReturn(serviceBundle);
             doAnswer(invocation -> listeners.add(invocation.getArgument(0)))
                     .when(serviceContext).addBundleListener(any(BundleListener.class));
+            doAnswer(invocation -> listeners.remove(invocation.getArgument(0)))
+                    .when(serviceContext).removeBundleListener(any(BundleListener.class));
             setBundleContext(serviceContext);
         }
 
@@ -660,7 +765,10 @@ public class AbstractMultiTypeCachingServiceTest {
         protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
             return Collections.singleton(CacheableTypeConfig.<TestSerializable>builder(TestSerializable.class, TEST_ITEM_TYPE, "test")
                     .withIdExtractor(TestSerializable::getId)
-                    .withStreamProcessor((bundleContext, url, inputStream) -> new TestSerializable("predefined", null))
+                    .withStreamProcessor((bundleContext, url, inputStream) -> {
+                        loads.incrementAndGet();
+                        return new TestSerializable("predefined", null);
+                    })
                     .build());
         }
 
@@ -670,6 +778,10 @@ public class AbstractMultiTypeCachingServiceTest {
 
         @Override
         protected void initializeTimers() {
+        }
+
+        @Override
+        protected void shutdownTimers() {
         }
     }
 
