@@ -104,8 +104,9 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     protected final Map<Long, List<PluginType>> pluginTypes = new ConcurrentHashMap<>();
 
     /**
-     * IDs of the bundles whose predefined items are loaded. A bundle that starts during the startup
-     * scan is seen both by the scan and by the bundle listener; this set makes the second one a no-op.
+     * IDs of the bundles whose predefined items have started loading (possibly still in progress on
+     * another thread). A bundle that starts during the startup scan may be seen both by the scan and
+     * by the bundle listener; this set makes the second one a no-op.
      */
     private final Set<Long> loadedBundleIds = ConcurrentHashMap.newKeySet();
 
@@ -609,7 +610,8 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
 
     /**
      * Loads predefined JSON items from bundle resources for all configured types.
-     * Does nothing if the bundle's items are already loaded and the bundle has not stopped since.
+     * Does nothing if an earlier call already started loading this bundle (it may still be running on
+     * another thread) and the bundle has not stopped since.
      *
      * @param bundleContext the bundle context used to discover predefined resources
      */
