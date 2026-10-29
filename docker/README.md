@@ -139,7 +139,8 @@ Note: Linux doesn't support the host.docker.internal DNS lookup method yet, it s
 
 See "Websites on other origins" in the manual's configuration chapter.
 
-### API keys
+### Authentication and API keys
+- `UNOMI_REST_AUTHENTICATION_ADMINDEFAULTTENANTID`: Tenant used when a JAAS admin request has no `X-Unomi-Tenant-Id` header (default: `default`)
 - `UNOMI_TENANT_APIKEY_REFRESH_INTERVAL`: How often, in milliseconds, each node reloads its list of API keys to pick up keys created on other nodes (default: `30000`)
 - `UNOMI_TENANT_APIKEY_MISS_REFRESH_INTERVAL`: Minimum time, in milliseconds, between reloads triggered by unknown keys (default: `5000`)
 

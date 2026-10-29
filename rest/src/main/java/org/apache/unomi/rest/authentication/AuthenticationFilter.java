@@ -27,6 +27,7 @@ import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.ExecutionContextManager;
+import org.apache.unomi.api.tenants.AdminTenantSelection;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
@@ -196,19 +197,8 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                         // Set the authenticated subject in Unomi's security service
                         securityService.setCurrentSubject(subject);
 
-                        // Check for tenant ID header
-                        String tenantId = requestContext.getHeaderString(UNOMI_TENANT_ID_HEADER);
-                        if (tenantId != null && !tenantId.trim().isEmpty()) {
-                            // Validate tenant exists
-                            Tenant tenant = tenantService.getTenant(tenantId);
-                            if (tenant != null) {
-                                executionContextManager.setCurrentContext(executionContextManager.createContext(tenantId));
-                            } else {
-                                logger.warn("Invalid tenant ID provided in header: {}", tenantId);
-                                executionContextManager.setCurrentContext(ExecutionContext.systemContext());
-                            }
-                        } else {
-                            executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                        if (!applyAdminTenantContext(requestContext)) {
+                            return;
                         }
                     }
                     return;
@@ -282,19 +272,8 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                         // Set the authenticated subject in Unomi's security service
                         securityService.setCurrentSubject(subject);
 
-                        // Check for tenant ID header
-                        String tenantId = requestContext.getHeaderString(UNOMI_TENANT_ID_HEADER);
-                        if (tenantId != null && !tenantId.trim().isEmpty()) {
-                            // Validate tenant exists
-                            Tenant tenant = tenantService.getTenant(tenantId);
-                            if (tenant != null) {
-                                executionContextManager.setCurrentContext(executionContextManager.createContext(tenantId));
-                            } else {
-                                logger.warn("Invalid tenant ID provided in header: {}", tenantId);
-                                executionContextManager.setCurrentContext(ExecutionContext.systemContext());
-                            }
-                        } else {
-                            executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                        if (!applyAdminTenantContext(requestContext)) {
+                            return;
                         }
                     }
                     return;
@@ -453,13 +432,51 @@ public class AuthenticationFilter implements ContainerRequestFilter {
         }
     }
 
-    private void unauthorized(ContainerRequestContext requestContext) {
-        Response response = Response.status(Response.Status.UNAUTHORIZED)
-                .header(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"" + REALM_NAME + "\"")
-                .entity("Unauthorized Access") // Ensures response is not empty
-                .build();
+    /**
+     * After JAAS succeeds, sets the execution context from {@code X-Unomi-Tenant-Id} or the
+     * configured admin default tenant (UNOMI-1008). Aborts the request when the selection is invalid.
+     * Package-visible for unit tests.
+     *
+     * @return {@code true} when a context was set; {@code false} when the request was aborted
+     */
+    boolean applyAdminTenantContext(ContainerRequestContext requestContext) {
+        AdminTenantSelection selection = AdminTenantSelection.select(
+                requestContext.getHeaderString(UNOMI_TENANT_ID_HEADER),
+                restAuthenticationConfig.getAdminDefaultTenantId(),
+                tenantService,
+                securityService.hasRole(UnomiRoles.ADMINISTRATOR));
+        switch (selection.getKind()) {
+            case TENANT:
+                executionContextManager.setCurrentContext(
+                        executionContextManager.createContext(selection.getTenantId()));
+                return true;
+            case SYSTEM:
+                executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                return true;
+            case UNKNOWN_TENANT:
+            case MISSING_DEFAULT:
+                logger.warn("{}", selection.clientMessage());
+                abort(requestContext, Response.Status.BAD_REQUEST, selection.clientMessage());
+                return false;
+            case FORBIDDEN_SYSTEM:
+                logger.warn("{}", selection.clientMessage());
+                abort(requestContext, Response.Status.FORBIDDEN, selection.clientMessage());
+                return false;
+            default:
+                throw new IllegalStateException("Unexpected admin tenant selection: " + selection.getKind());
+        }
+    }
 
-        requestContext.abortWith(response);
+    private void unauthorized(ContainerRequestContext requestContext) {
+        abort(requestContext, Response.Status.UNAUTHORIZED, "Unauthorized Access");
+    }
+
+    private void abort(ContainerRequestContext requestContext, Response.Status status, String entity) {
+        Response.ResponseBuilder builder = Response.status(status).entity(entity);
+        if (status == Response.Status.UNAUTHORIZED) {
+            builder.header(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"" + REALM_NAME + "\"");
+        }
+        requestContext.abortWith(builder.build());
     }
 
     private boolean isPublicPath(ContainerRequestContext requestContext) {

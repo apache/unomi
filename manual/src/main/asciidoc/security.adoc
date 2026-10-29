@@ -27,13 +27,20 @@ Unomi 4.0 authenticates every request so the server can resolve a **tenant** (or
 | Browser / mobile SDKs, trackers
 
 | Private REST
-| Basic `tenantId:privateApiKey`, or JAAS + optional `X-Unomi-Tenant-Id`
+| Basic `tenantId:privateApiKey`, or JAAS + `X-Unomi-Tenant-Id` (optional; see below)
 | Server-side integrations, admin UIs
 
 | Tenant administration (`/cxs/tenants`)
 | JAAS system administrator (for example `karaf:$UNOMI_ROOT_PASSWORD`)
 | Create tenants, rotate keys
 |===
+
+When a JAAS administrator authenticates without `X-Unomi-Tenant-Id`, Unomi uses the configured admin default tenant
+(`org.apache.unomi.rest.authentication.adminDefaultTenantId` / `UNOMI_REST_AUTHENTICATION_ADMINDEFAULTTENANTID`,
+default `default`), where a 3.0→4.0 migration puts the data. An unknown tenant id, or a missing default tenant,
+returns HTTP 400 after authentication succeeds. Wrong credentials always return HTTP 401, whether or not the
+tenant exists. The system context is never the silent default: send `X-Unomi-Tenant-Id: system`, and only a full
+administrator (`ROLE_UNOMI_ADMIN`) may do so.
 
 Temporary exception: <<_v2_compatibility_mode,V2 compatibility mode>> allows public endpoints without API keys while migrating 2.x clients.
 
@@ -62,10 +69,11 @@ else Public path + X-Unomi-Api-Key
 else Private path + Basic tenantId:privateKey
   Auth -> Tenant : Validate private key
   Auth -> API : Tenant context
-else Private path + JAAS (+ optional X-Unomi-Tenant-Id)
-  Auth -> API : Admin / tenant context
+else Private path + JAAS
+  Auth -> Tenant : X-Unomi-Tenant-Id or admin default tenant
+  Auth -> API : Tenant context (system only with explicit header)
 else V2 compatibility mode
-  Auth -> Tenant : Default tenant
+  Auth -> Tenant : Compatibility tenant
   Auth -> API : Legacy 2.x-style access
 else
   Auth --> Client : 401 Unauthorized

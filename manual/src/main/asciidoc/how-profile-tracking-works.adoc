@@ -123,9 +123,11 @@ Starting with Apache Unomi 4.0, tenant resolution is mandatory for all requests 
 3. **Tenant ID Header** (When using JAAS authentication):
    * Send the `X-Unomi-Tenant-Id` header with the tenant ID
    * Used when authenticating via JAAS (e.g., the `karaf` user and your configured `UNOMI_ROOT_PASSWORD`)
-   * The tenant ID must exist in the system
+   * The tenant ID must exist; an unknown id returns HTTP 400 after authentication succeeds
+   * If the header is omitted, Unomi uses the configured admin default tenant (default `default`)
+   * The system context needs an explicit `X-Unomi-Tenant-Id: system` and a full administrator
 
-If no tenant can be resolved, the request will fail with an `UNAUTHORIZED` (401) error. This ensures that all data operations are scoped to the correct tenant in multi-tenant deployments.
+Wrong credentials return HTTP 401 whether or not the tenant exists. A missing admin default tenant also fails with a clear error (HTTP 400 on REST).
 ====
 
 ===== Example: Tenant Resolution

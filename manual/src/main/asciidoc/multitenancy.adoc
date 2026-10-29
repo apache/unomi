@@ -157,13 +157,21 @@ curl -X GET http://localhost:8181/cxs/profiles \
 
 ===== Basic Setup
 
-Configure default tenant settings in `etc/org.apache.unomi.tenant.cfg`:
+Configure the admin default tenant in `etc/org.apache.unomi.rest.authentication.cfg`
+(or `org.apache.unomi.rest.authentication.adminDefaultTenantId` /
+`UNOMI_REST_AUTHENTICATION_ADMINDEFAULTTENANTID`):
 
 [source,properties]
 ----
-# Default tenant ID for backward compatibility
-tenant.default.id=default
+# Tenant for JAAS admin requests that omit X-Unomi-Tenant-Id (UNOMI-1008).
+# Defaults to "default", where a 3.0→4.0 migration puts the data.
+admin.default.tenant.id=default
+----
 
+Other tenant-related settings live in `etc/org.apache.unomi.tenant.cfg`:
+
+[source,properties]
+----
 # API key validity period
 tenant.apikey.validity.period=30
 tenant.apikey.validity.unit=DAYS

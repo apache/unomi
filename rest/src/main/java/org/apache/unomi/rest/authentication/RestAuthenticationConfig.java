@@ -16,6 +16,8 @@
  */
 package org.apache.unomi.rest.authentication;
 
+import org.apache.unomi.api.tenants.AdminTenantConfig;
+
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -23,7 +25,7 @@ import java.util.regex.Pattern;
 /**
  * This interface provide rest authentication configuration for the rest server.
  */
-public interface RestAuthenticationConfig {
+public interface RestAuthenticationConfig extends AdminTenantConfig {
 
     /**
      * This provide the patterns to identify public endpoints

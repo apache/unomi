@@ -122,9 +122,20 @@ given()
     .body(payload)
     .post("/cxs/profiles");
 
-// For private endpoints using system administrator authentication
+// For private endpoints using system administrator authentication.
+// Without X-Unomi-Tenant-Id, Unomi uses the admin default tenant (default "default"),
+// where migration puts the data. To work in the system context, send
+// .header("X-Unomi-Tenant-Id", "system") explicitly.
 given()
     .auth().preemptive().basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"))
+    .contentType(ContentType.JSON)
+    .body(payload)
+    .post("/cxs/profiles");
+
+// Same call scoped to a named tenant
+given()
+    .auth().preemptive().basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"))
+    .header("X-Unomi-Tenant-Id", "default")
     .contentType(ContentType.JSON)
     .body(payload)
     .post("/cxs/profiles");

@@ -42,7 +42,7 @@ you might need to adjust the URL to point GraphQL UI to the `/graphql` endpoint.
 GraphQL requests follow the same tenant security model as REST:
 
 * *Public read operations* on the `cdp` root field: send `X-Unomi-Api-Key` with a tenant **public** API key.
-* *Mutations and administrative queries*: HTTP Basic authentication with `tenantId:privateApiKey`, or JAAS credentials plus optional `X-Unomi-Tenant-Id`.
+* *Mutations and administrative queries*: HTTP Basic authentication with `tenantId:privateApiKey`, or JAAS credentials. With JAAS, `X-Unomi-Tenant-Id` selects the tenant; when it is omitted, Unomi uses the same admin default tenant as REST (default `default`). The system context needs an explicit `X-Unomi-Tenant-Id: system` and a full administrator.
 * *Introspection* (`IntrospectionQuery`): allowed without credentials for schema discovery.
 
 See <<_multitenancy,Multi-tenancy>> for key management.
