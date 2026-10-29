@@ -30,6 +30,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.unomi.healthcheck.HealthCheckConfig.CONFIG_AUTH_REALM;
 
@@ -42,7 +49,10 @@ public class HealthCheckService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HealthCheckService.class.getName());
 
-    private final List<HealthCheckProvider> providers = new ArrayList<>();
+    private final List<HealthCheckProvider> providers = new CopyOnWriteArrayList<>();
+    private final AtomicInteger threadCount = new AtomicInteger();
+    private final ExecutorService executor = Executors.newCachedThreadPool(
+            r -> new Thread(r, "unomi-healthcheck-" + threadCount.incrementAndGet()));
     private final Object cacheLock = new Object();
     private volatile long cacheTimestamp = 0L;
     private volatile List<HealthCheckResponse> healthCache = Collections.emptyList();
@@ -68,7 +78,7 @@ public class HealthCheckService {
     }
 
     @Reference(service = HealthCheckConfig.class, policy = ReferencePolicy.DYNAMIC, updated = "setConfig")
-    private void setConfig(HealthCheckConfig config) throws ServletException, NamespaceException {
+    protected void setConfig(HealthCheckConfig config) throws ServletException, NamespaceException {
         this.config = config;
         if (httpService == null ) {
             LOGGER.info("Healthcheck config with {} entrie(s) did not update the service as not fully started yet.", config.getSize());
@@ -103,6 +113,7 @@ public class HealthCheckService {
             httpService.unregister("/health/check");
             registered = false;
         }
+        executor.shutdownNow();
     }
 
     @Reference(service = HealthCheckProvider.class, cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC, unbind = "unbind")
@@ -130,7 +141,7 @@ public class HealthCheckService {
             }
         } else if (shouldRefreshCache()) {
             synchronized (cacheLock) {
-                if (!busy) {
+                if (isCacheExpired()) {
                     busy = true;
                     try {
                         refreshCache();
@@ -144,21 +155,41 @@ public class HealthCheckService {
     }
 
     private boolean shouldRefreshCache() {
-        return !busy && (System.currentTimeMillis() - cacheTimestamp) > 1000;
+        return !busy && isCacheExpired();
+    }
+
+    private boolean isCacheExpired() {
+        return (System.currentTimeMillis() - cacheTimestamp) > 1000;
     }
 
     private void refreshCache() {
         try {
             List<HealthCheckResponse> health = new ArrayList<>();
             health.add(HealthCheckResponse.live("karaf"));
-            for (HealthCheckProvider provider : providers.stream()
+            List<HealthCheckProvider> enabledProviders = providers.stream()
                     .filter(p -> config.getEnabledProviders().contains(p.name()))
-                    .toList()) {
+                    .toList();
+            List<Future<HealthCheckResponse>> futures = new ArrayList<>();
+            for (HealthCheckProvider provider : enabledProviders) {
+                futures.add(executor.submit(provider::execute));
+            }
+            long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(config.getTimeout());
+            for (int i = 0; i < enabledProviders.size(); i++) {
+                HealthCheckProvider provider = enabledProviders.get(i);
+                Future<HealthCheckResponse> future = futures.get(i);
                 try {
-                    HealthCheckResponse response = provider.execute();
-                    health.add(response);
+                    health.add(future.get(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS));
+                } catch (TimeoutException e) {
+                    future.cancel(true);
+                    LOGGER.warn("Health check {} timed out after {} ms", provider.name(), config.getTimeout());
+                    health.add(provider.timeout());
+                } catch (InterruptedException e) {
+                    futures.forEach(f -> f.cancel(true));
+                    Thread.currentThread().interrupt();
+                    LOGGER.warn("Health check refresh interrupted, keeping the previous results");
+                    return;
                 } catch (Exception e) {
-                    LOGGER.error("Error while executing health check", e);
+                    LOGGER.error("Error while executing health check {}", provider.name(), e);
                     health.add(provider.timeout());
                 }
             }
