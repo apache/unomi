@@ -53,7 +53,9 @@ public class GroovyActionsEndpointRoleSecurityIT extends BaseIT {
                     403, tenantAdmin.getStatusLine().getStatusCode());
         }
 
-        try (CloseableHttpResponse jaasAdmin = executeHttpRequest(new HttpDelete(path), AuthType.JAAS_ADMIN)) {
+        HttpDelete jaasDelete = new HttpDelete(path);
+        jaasDelete.setHeader("X-Unomi-Tenant-Id", "system");
+        try (CloseableHttpResponse jaasAdmin = executeHttpRequest(jaasDelete, AuthType.JAAS_ADMIN)) {
             int status = jaasAdmin.getStatusLine().getStatusCode();
             Assert.assertTrue("JAAS admin delete should be allowed (got " + status + ")",
                     status == 200 || status == 204 || status == 404);
@@ -75,6 +77,7 @@ public class GroovyActionsEndpointRoleSecurityIT extends BaseIT {
         HttpPost uploadJaas = multipartPost(getFullUrl("/cxs/groovyActions/"),
                 "----UnomiGroovyBoundaryJaas",
                 filePart("file", "RestRoleSecurityITProbe.groovy", "text/plain", script));
+        uploadJaas.setHeader("X-Unomi-Tenant-Id", "system");
         try (CloseableHttpResponse jaasAdmin = executeHttpRequest(uploadJaas, AuthType.JAAS_ADMIN)) {
             Assert.assertEquals("JAAS admin should be allowed to upload groovy actions",
                     200, jaasAdmin.getStatusLine().getStatusCode());

@@ -23,6 +23,8 @@ import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.ExecutionContextManager;
+import org.apache.unomi.api.tenants.AdminTenantConfig;
+import org.apache.unomi.api.tenants.AdminTenantSelection;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
@@ -57,19 +59,34 @@ public class GraphQLServletSecurityValidator {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphQLServletSecurityValidator.class);
     private static final String UNOMI_TENANT_ID_HEADER = "X-Unomi-Tenant-Id";
+    private static final String TENANT_REJECTION_STATUS_ATTRIBUTE =
+            GraphQLServletSecurityValidator.class.getName() + ".tenantRejectionStatus";
+    private static final String TENANT_REJECTION_MESSAGE_ATTRIBUTE =
+            GraphQLServletSecurityValidator.class.getName() + ".tenantRejectionMessage";
 
     private final Parser parser;
     private final TenantService tenantService;
     private final SecurityService securityService;
     private final ExecutionContextManager executionContextManager;
+    private final AdminTenantConfig adminTenantConfig;
 
     public GraphQLServletSecurityValidator(TenantService tenantService,
                                          SecurityService securityService,
                                          ExecutionContextManager executionContextManager) {
+        this(tenantService, securityService, executionContextManager, () -> AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID);
+    }
+
+    public GraphQLServletSecurityValidator(TenantService tenantService,
+                                         SecurityService securityService,
+                                         ExecutionContextManager executionContextManager,
+                                         AdminTenantConfig adminTenantConfig) {
         this.parser = new Parser();
         this.tenantService = tenantService;
         this.securityService = securityService;
         this.executionContextManager = executionContextManager;
+        this.adminTenantConfig = adminTenantConfig != null
+                ? adminTenantConfig
+                : () -> AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID;
     }
 
     /**
@@ -86,6 +103,9 @@ public class GraphQLServletSecurityValidator {
         }
         if (isAuthenticatedUser(req)) {
             return true;
+        }
+        if (sendTenantRejection(req, res)) {
+            return false;
         }
         // A 401 carries a challenge whether the header was missing or its credential was refused.
         res.addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
@@ -133,9 +153,26 @@ public class GraphQLServletSecurityValidator {
         if (isAuthenticatedUser(req)) {
             return true;
         } else {
-            res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+            if (!sendTenantRejection(req, res)) {
+                res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+            }
             return false;
         }
+    }
+
+    /**
+     * Sends the 400/403 recorded when valid JAAS credentials named an unusable tenant (UNOMI-1008),
+     * the same statuses REST returns, so callers can tell a tenant problem from wrong credentials.
+     *
+     * @return {@code true} when a response was sent
+     */
+    private boolean sendTenantRejection(HttpServletRequest req, HttpServletResponse res) throws IOException {
+        Object status = req.getAttribute(TENANT_REJECTION_STATUS_ATTRIBUTE);
+        if (!(status instanceof Integer)) {
+            return false;
+        }
+        res.sendError((Integer) status, (String) req.getAttribute(TENANT_REJECTION_MESSAGE_ATTRIBUTE));
+        return true;
     }
 
     /**
@@ -389,35 +426,45 @@ public class GraphQLServletSecurityValidator {
                 return false;
             }
 
-            // Check for tenant ID header (only present when the credential arrived on a request;
-            // the connection_init route carries none, so it can never select a tenant this way)
+            // Tenant header or the configured admin default (UNOMI-1008). connection_init has no
+            // request headers for the tenant, so it uses the admin default like a REST call without
+            // X-Unomi-Tenant-Id. The system context needs an explicit header and a full administrator.
             String tenantId = req != null ? req.getHeader(UNOMI_TENANT_ID_HEADER) : null;
-            if (tenantId != null && !tenantId.trim().isEmpty()) {
-                // Validate tenant exists
-                Tenant tenant = tenantService.getTenant(tenantId);
-                if (tenant == null) {
-                    LOG.warn("Invalid tenant ID provided in header: {}", tenantId);
+            AdminTenantSelection selection = AdminTenantSelection.select(
+                    tenantId,
+                    adminTenantConfig.getAdminDefaultTenantId(),
+                    tenantService,
+                    securityService.hasRole(UnomiRoles.ADMINISTRATOR));
+            switch (selection.getKind()) {
+                case TENANT:
+                    if (!securityService.hasSystemAccess()
+                            && !securityService.hasTenantAccess(selection.getTenantId())) {
+                        LOG.warn("Refusing GraphQL access to '{}': no authority over tenant {}",
+                                username, selection.getTenantId());
+                        securityService.clearCurrentSubject();
+                        return false;
+                    }
+                    executionContextManager.setCurrentContext(
+                            executionContextManager.createContext(selection.getTenantId()));
+                    break;
+                case SYSTEM:
+                    executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                    break;
+                case UNKNOWN_TENANT:
+                case MISSING_DEFAULT:
+                case FORBIDDEN_SYSTEM:
+                    LOG.warn("Refusing GraphQL access to '{}': {}", username, selection.clientMessage());
                     securityService.clearCurrentSubject();
+                    if (req != null) {
+                        req.setAttribute(TENANT_REJECTION_STATUS_ATTRIBUTE,
+                                selection.getKind() == AdminTenantSelection.Kind.FORBIDDEN_SYSTEM
+                                        ? HttpServletResponse.SC_FORBIDDEN
+                                        : HttpServletResponse.SC_BAD_REQUEST);
+                        req.setAttribute(TENANT_REJECTION_MESSAGE_ATTRIBUTE, selection.clientMessage());
+                    }
                     return false;
-                }
-                // Naming a tenant is not the same as having authority over it.
-                if (!securityService.hasSystemAccess() && !securityService.hasTenantAccess(tenantId)) {
-                    LOG.warn("Refusing GraphQL access to '{}': no authority over tenant {}", username, tenantId);
-                    securityService.clearCurrentSubject();
-                    return false;
-                }
-                executionContextManager.setCurrentContext(executionContextManager.createContext(tenantId));
-            } else {
-                // No tenant header. The system context is inherited by every tenant, so it is reserved
-                // for subjects that actually hold system access rather than being the default.
-                if (!securityService.hasSystemAccess()) {
-                    LOG.warn("Refusing GraphQL access to '{}': no tenant specified and no system access", username);
-                    securityService.clearCurrentSubject();
-                    return false;
-                }
-                // The thread-local execution context must always be set explicitly here, otherwise a
-                // stale context from a previous request on this pooled thread could leak in.
-                executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                default:
+                    throw new IllegalStateException("Unexpected admin tenant selection: " + selection.getKind());
             }
 
             if (req != null) {

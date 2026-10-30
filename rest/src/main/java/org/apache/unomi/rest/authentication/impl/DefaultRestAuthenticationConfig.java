@@ -16,8 +16,9 @@
  */
 package org.apache.unomi.rest.authentication.impl;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.security.UnomiRoles;
+import org.apache.unomi.api.tenants.AdminTenantConfig;
+import org.apache.unomi.api.tenants.AdminTenantSelection;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -35,7 +36,8 @@ import java.util.regex.Pattern;
  * Default OSGi-backed implementation of {@link RestAuthenticationConfig} for REST endpoint
  * authentication, role mappings, and single-tenant compatibility mode settings.
  */
-@Component(service = { RestAuthenticationConfig.class}, configurationPid = "org.apache.unomi.rest.authentication", immediate = true)
+@Component(service = { RestAuthenticationConfig.class, AdminTenantConfig.class },
+        configurationPid = "org.apache.unomi.rest.authentication", immediate = true)
 @Designate(ocd = DefaultRestAuthenticationConfig.Config.class)
 public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig {
 
@@ -77,6 +79,7 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
     }
 
     private volatile boolean singleTenantCompatibilityModeEnabled = false;
+    private volatile String adminDefaultTenantId = AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID;
 
     /**
      * Updates authentication settings from OSGi configuration.
@@ -91,8 +94,16 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
             return;
         }
         boolean singleTenantMode = config.singletenantcompatibility_enabled();
-        LOGGER.info("Configuration updated - singleTenantCompatibilityModeEnabled: {}", singleTenantMode);
+        String rawDefault = config.default_tenant_id();
+        String normalizedDefault = AdminTenantSelection.normalizeDefaultTenantId(rawDefault);
+        if (rawDefault != null && !rawDefault.trim().isEmpty()
+                && !normalizedDefault.equals(rawDefault.trim())) {
+            LOGGER.warn("Ignoring default.tenant.id value '{}'; using '{}'", rawDefault, normalizedDefault);
+        }
+        LOGGER.info("Configuration updated - singleTenantCompatibilityModeEnabled: {}, defaultTenantId: {}",
+                singleTenantMode, normalizedDefault);
         this.singleTenantCompatibilityModeEnabled = singleTenantMode;
+        this.adminDefaultTenantId = normalizedDefault;
     }
 
 
@@ -116,6 +127,11 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
         return singleTenantCompatibilityModeEnabled;
     }
 
+    @Override
+    public String getAdminDefaultTenantId() {
+        return adminDefaultTenantId;
+    }
+
 
     /**
      * OSGi configuration for REST authentication.
@@ -136,5 +152,22 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
             description = "Serve clients from before Unomi 4.0, which send no tenant API key, and run them all on one tenant"
         )
         boolean singletenantcompatibility_enabled() default false;
+
+        /**
+         * Default tenant ({@code default.tenant.id}). In 4.0 it is only used for JAAS admin requests that
+         * omit {@code X-Unomi-Tenant-Id}; single-tenant compatibility mode still uses tenant
+         * {@code "default"} on REST (UNOMI-1029).
+         *
+         * @return the default tenant id
+         */
+        @AttributeDefinition(
+            name = "Default tenant id",
+            description = "Tenant used when a JAAS-authenticated admin request (REST or GraphQL) has no "
+                    + "X-Unomi-Tenant-Id header (UNOMI-1008). Defaults to \"default\"; set it to the tenant id "
+                    + "chosen during a 3.0 migration. Not used yet by single-tenant compatibility mode, whose "
+                    + "REST requests always run on tenant \"default\" (UNOMI-1029). "
+                    + "Cannot be \"system\": that context needs an explicit header."
+        )
+        String default_tenant_id() default AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID;
     }
 }

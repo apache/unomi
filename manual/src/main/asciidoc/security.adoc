@@ -27,7 +27,7 @@ Unomi 4.0 authenticates every request so the server can resolve a **tenant** (or
 | Browser / mobile SDKs, trackers
 
 | Private REST
-| Basic `tenantId:privateApiKey`, or JAAS + optional `X-Unomi-Tenant-Id`
+| Basic `tenantId:privateApiKey`, or JAAS + `X-Unomi-Tenant-Id` (optional; see below)
 | Server-side integrations, admin UIs
 
 | Tenant administration (`/cxs/tenants`)
@@ -35,7 +35,18 @@ Unomi 4.0 authenticates every request so the server can resolve a **tenant** (or
 | Create tenants, rotate keys
 |===
 
+When a JAAS administrator authenticates without `X-Unomi-Tenant-Id`, Unomi uses the configured admin default tenant
+(`org.apache.unomi.rest.authentication.defaultTenantId` / `UNOMI_REST_AUTHENTICATION_DEFAULTTENANTID`,
+default `default`). Set it to the tenant id chosen during the 3.0→4.0 migration (also `default` unless changed). An unknown tenant id, or a missing default tenant,
+returns HTTP 400 after authentication succeeds, on REST and GraphQL. Wrong credentials always return HTTP 401, whether
+or not the tenant exists. For tenant data, the system context is never the silent default: send
+`X-Unomi-Tenant-Id: system`, and only a full administrator (`ROLE_UNOMI_ADMIN`) may do so. Tenant administration
+(`/cxs/tenants`) is the exception: it manages the tenant registry, so a full administrator without the header works in
+the system context, even before any tenant exists.
+
 Temporary exception: <<_v2_compatibility_mode,V2 compatibility mode>> allows public endpoints without API keys while migrating 2.x clients.
+In that mode every REST request, JAAS admin requests included, runs on tenant `default` and the default tenant setting
+is not used yet; GraphQL still follows the setting, so keep it at `default` while the mode is on.
 
 Public context callers must present the profile cookie as the profile bearer (body `profileId` is ignored for public callers). See <<_client_facing_hardening_4_0,client-facing hardening>> and <<_how_profile_tracking_works,How profile tracking works>>.
 
@@ -62,10 +73,11 @@ else Public path + X-Unomi-Api-Key
 else Private path + Basic tenantId:privateKey
   Auth -> Tenant : Validate private key
   Auth -> API : Tenant context
-else Private path + JAAS (+ optional X-Unomi-Tenant-Id)
-  Auth -> API : Admin / tenant context
+else Private path + JAAS
+  Auth -> Tenant : X-Unomi-Tenant-Id or admin default tenant
+  Auth -> API : Tenant context (system only with explicit header)
 else V2 compatibility mode
-  Auth -> Tenant : Default tenant
+  Auth -> Tenant : Compatibility tenant
   Auth -> API : Legacy 2.x-style access
 else
   Auth --> Client : 401 Unauthorized

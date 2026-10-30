@@ -122,20 +122,36 @@ given()
     .body(payload)
     .post("/cxs/profiles");
 
-// For private endpoints using system administrator authentication
+// For private endpoints using system administrator authentication.
+// Without X-Unomi-Tenant-Id, Unomi uses the admin default tenant (default "default", which is
+// also the migration's default tenant id; see the note below if you chose another one).
+// To work in the system context, send .header("X-Unomi-Tenant-Id", "system") explicitly.
 given()
     .auth().preemptive().basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"))
     .contentType(ContentType.JSON)
     .body(payload)
     .post("/cxs/profiles");
 
-// For tenant administration (system admin only)
+// Same call scoped to a named tenant
+given()
+    .auth().preemptive().basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"))
+    .header("X-Unomi-Tenant-Id", "default")
+    .contentType(ContentType.JSON)
+    .body(payload)
+    .post("/cxs/profiles");
+
+// For tenant administration (system admin only). No tenant header is needed:
+// these calls run in the system context, even before any tenant exists.
 given()
     .auth().preemptive().basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"))
     .contentType(ContentType.JSON)
     .body(tenantPayload)
     .post("/cxs/tenants");
 ----
+
+NOTE: JAAS admin calls without `X-Unomi-Tenant-Id` now act on the admin default tenant. If your migration used another
+tenant id than `default`, set `org.apache.unomi.rest.authentication.defaultTenantId` to the same value. Definitions
+that every tenant must inherit (for example shared rules or segments) are written with `X-Unomi-Tenant-Id: system`.
 
 ==== Implementation Strategy
 
@@ -571,7 +587,8 @@ If you are migrating from **Unomi 2.x** (not 3.0), you can enable <<_v2_compatib
 singletenantcompatibility.enabled = true
 ----
 
-This mode always uses tenant `default`. There is no property to point it at another tenant. If tenant `default` does not exist yet, the first public request creates it. Migrated 2.x data has to live in that tenant to be visible while the mode is on.
+This mode always uses tenant `default`. There is no property to point it at another tenant: `defaultTenantId` does not
+apply to it yet, so leave that setting at `default` while the mode is on (GraphQL still follows it). If tenant `default` does not exist yet, the first public request creates it. Migrated 2.x data has to live in that tenant to be visible while the mode is on.
 
 Environment variable equivalent: `UNOMI_REST_AUTHENTICATION_SINGLETENANTCOMPATIBILITYMODEENABLED=true`
 

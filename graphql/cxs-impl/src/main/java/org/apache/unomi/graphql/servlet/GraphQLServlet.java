@@ -24,6 +24,7 @@ import graphql.introspection.IntrospectionQuery;
 import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.ExecutionContextManager;
+import org.apache.unomi.api.tenants.AdminTenantConfig;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
 import org.apache.unomi.graphql.services.ServiceManager;
@@ -65,11 +66,18 @@ public class GraphQLServlet extends WebSocketServlet {
 
     private SecurityService securityService;
 
+    private AdminTenantConfig adminTenantConfig;
+
     private GraphQLServletSecurityValidator validator;
 
     @Reference
     public void setServiceManager(ServiceManager serviceManager) {
         this.serviceManager = serviceManager;
+    }
+
+    @Reference
+    public void setAdminTenantConfig(AdminTenantConfig adminTenantConfig) {
+        this.adminTenantConfig = adminTenantConfig;
     }
 
     @Reference
@@ -102,7 +110,11 @@ public class GraphQLServlet extends WebSocketServlet {
         // Must precede super.init(): WebSocketServlet.init() calls configure(), which captures this
         // validator into the SubscriptionWebSocketFactory. Constructing it afterwards left the factory -
         // and therefore every socket - with a null validator, so connection_init could never authenticate.
-        this.validator = new GraphQLServletSecurityValidator(tenantService, securityService, executionContextManager);
+        AdminTenantConfig tenantConfig = adminTenantConfig != null
+                ? adminTenantConfig
+                : () -> AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID;
+        this.validator = new GraphQLServletSecurityValidator(
+                tenantService, securityService, executionContextManager, tenantConfig);
         super.init(config);
     }
 

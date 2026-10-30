@@ -28,7 +28,9 @@ When single-tenant compatibility mode is enabled:
 - **Public endpoints** (like `/context.json`) require no authentication (like V2)
 - **Protected events** (like `login`, `updateProperties`) require IP + X-Unomi-Peer (like V2)
 - **Private endpoints** require system administrator authentication (like V2)
-- **Tenant `default`** is used for every operation. The mode cannot be pointed at another tenant.
+- **Tenant `default`** is used for every operation. The mode cannot be pointed at another tenant: it ignores
+  `X-Unomi-Tenant-Id` and the `defaultTenantId` setting on REST. GraphQL is not affected by the mode and still uses
+  `defaultTenantId` for JAAS admin requests without a header, so keep that setting at `default` while the mode is on.
   The tenant is created on a public request if it is missing. Each node then keeps it in memory for
   about 30 seconds, so public requests do not wait on each other or re-read it from the database
   every time. A change made on another node is picked up after about that time.

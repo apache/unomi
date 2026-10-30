@@ -27,6 +27,7 @@ import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.ExecutionContextManager;
+import org.apache.unomi.api.tenants.AdminTenantSelection;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
@@ -42,6 +43,7 @@ import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.PreMatching;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import java.io.IOException;
@@ -189,26 +191,15 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
                 try {
                     jaasAuthenticationFilter.filter(requestContext);
-                    // Get the subject from the security context after successful JAAS auth
-                    SecurityContext securityContext = JAXRSUtils.getCurrentMessage().get(SecurityContext.class);
-                    if (securityContext != null) {
-                        Subject subject = ((RolePrefixSecurityContextImpl) securityContext).getSubject();
+                    Subject subject = authenticatedJaasSubject();
+                    if (subject != null) {
                         // Set the authenticated subject in Unomi's security service
                         securityService.setCurrentSubject(subject);
 
-                        // Check for tenant ID header
-                        String tenantId = requestContext.getHeaderString(UNOMI_TENANT_ID_HEADER);
-                        if (tenantId != null && !tenantId.trim().isEmpty()) {
-                            // Validate tenant exists
-                            Tenant tenant = tenantService.getTenant(tenantId);
-                            if (tenant != null) {
-                                executionContextManager.setCurrentContext(executionContextManager.createContext(tenantId));
-                            } else {
-                                logger.warn("Invalid tenant ID provided in header: {}", tenantId);
-                                executionContextManager.setCurrentContext(ExecutionContext.systemContext());
-                            }
-                        } else {
-                            executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                        // Tenant administration works on the tenant registry, so it runs in the
+                        // system context when no header is sent, even before any tenant exists.
+                        if (!applyAdminTenantContext(requestContext, true)) {
+                            return;
                         }
                     }
                     return;
@@ -275,26 +266,13 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                 // If tenant auth fails, try JAAS auth
                 try {
                     jaasAuthenticationFilter.filter(requestContext);
-                    // Get the subject from the security context after successful JAAS auth
-                    SecurityContext securityContext = JAXRSUtils.getCurrentMessage().get(SecurityContext.class);
-                    if (securityContext != null) {
-                        Subject subject = ((RolePrefixSecurityContextImpl) securityContext).getSubject();
+                    Subject subject = authenticatedJaasSubject();
+                    if (subject != null) {
                         // Set the authenticated subject in Unomi's security service
                         securityService.setCurrentSubject(subject);
 
-                        // Check for tenant ID header
-                        String tenantId = requestContext.getHeaderString(UNOMI_TENANT_ID_HEADER);
-                        if (tenantId != null && !tenantId.trim().isEmpty()) {
-                            // Validate tenant exists
-                            Tenant tenant = tenantService.getTenant(tenantId);
-                            if (tenant != null) {
-                                executionContextManager.setCurrentContext(executionContextManager.createContext(tenantId));
-                            } else {
-                                logger.warn("Invalid tenant ID provided in header: {}", tenantId);
-                                executionContextManager.setCurrentContext(ExecutionContext.systemContext());
-                            }
-                        } else {
-                            executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                        if (!applyAdminTenantContext(requestContext, false)) {
+                            return;
                         }
                     }
                     return;
@@ -453,13 +431,72 @@ public class AuthenticationFilter implements ContainerRequestFilter {
         }
     }
 
-    private void unauthorized(ContainerRequestContext requestContext) {
-        Response response = Response.status(Response.Status.UNAUTHORIZED)
-                .header(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"" + REALM_NAME + "\"")
-                .entity("Unauthorized Access") // Ensures response is not empty
-                .build();
+    /**
+     * Subject left in the CXF security context by a successful JAAS login. Package-visible so unit
+     * tests can drive {@link #filter} without a CXF message.
+     *
+     * @return the subject, or {@code null} when JAAS did not authenticate the request
+     */
+    Subject authenticatedJaasSubject() {
+        SecurityContext securityContext = JAXRSUtils.getCurrentMessage().get(SecurityContext.class);
+        return securityContext != null ? ((RolePrefixSecurityContextImpl) securityContext).getSubject() : null;
+    }
 
-        requestContext.abortWith(response);
+    /**
+     * After JAAS succeeds, sets the execution context from {@code X-Unomi-Tenant-Id} or the
+     * configured admin default tenant (UNOMI-1008). Aborts the request when the selection is invalid.
+     * Package-visible for unit tests.
+     *
+     * @param systemScopedResource {@code true} for tenant administration: a full administrator without
+     *                             a header then gets the system context instead of the admin default
+     * @return {@code true} when a context was set; {@code false} when the request was aborted
+     */
+    boolean applyAdminTenantContext(ContainerRequestContext requestContext, boolean systemScopedResource) {
+        AdminTenantSelection selection = AdminTenantSelection.select(
+                requestContext.getHeaderString(UNOMI_TENANT_ID_HEADER),
+                restAuthenticationConfig.getAdminDefaultTenantId(),
+                tenantService,
+                securityService.hasRole(UnomiRoles.ADMINISTRATOR),
+                systemScopedResource);
+        switch (selection.getKind()) {
+            case TENANT:
+                executionContextManager.setCurrentContext(
+                        executionContextManager.createContext(selection.getTenantId()));
+                return true;
+            case SYSTEM:
+                executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                return true;
+            case UNKNOWN_TENANT:
+            case MISSING_DEFAULT:
+                if (!securityService.hasSystemAccess()) {
+                    // The authorization filter refuses such an account with 403 whatever the tenant.
+                    // Answer the same here, so that it cannot learn which tenants exist.
+                    abort(requestContext, Response.Status.FORBIDDEN, "User does not have required role");
+                    return false;
+                }
+                logger.warn("{}", selection.clientMessage());
+                abort(requestContext, Response.Status.BAD_REQUEST, selection.clientMessage());
+                return false;
+            case FORBIDDEN_SYSTEM:
+                logger.warn("{}", selection.clientMessage());
+                abort(requestContext, Response.Status.FORBIDDEN, selection.clientMessage());
+                return false;
+            default:
+                throw new IllegalStateException("Unexpected admin tenant selection: " + selection.getKind());
+        }
+    }
+
+    private void unauthorized(ContainerRequestContext requestContext) {
+        abort(requestContext, Response.Status.UNAUTHORIZED, "Unauthorized Access");
+    }
+
+    private void abort(ContainerRequestContext requestContext, Response.Status status, String entity) {
+        // Plain text: the entity may echo the tenant header, and must never be rendered as HTML.
+        Response.ResponseBuilder builder = Response.status(status).entity(entity).type(MediaType.TEXT_PLAIN_TYPE);
+        if (status == Response.Status.UNAUTHORIZED) {
+            builder.header(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"" + REALM_NAME + "\"");
+        }
+        requestContext.abortWith(builder.build());
     }
 
     private boolean isPublicPath(ContainerRequestContext requestContext) {

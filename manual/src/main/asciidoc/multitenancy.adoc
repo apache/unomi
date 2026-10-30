@@ -157,13 +157,25 @@ curl -X GET http://localhost:8181/cxs/profiles \
 
 ===== Basic Setup
 
-Configure default tenant settings in `etc/org.apache.unomi.tenant.cfg`:
+Configure the default tenant in `etc/org.apache.unomi.rest.authentication.cfg`
+(or `org.apache.unomi.rest.authentication.defaultTenantId` /
+`UNOMI_REST_AUTHENTICATION_DEFAULTTENANTID`):
 
 [source,properties]
 ----
-# Default tenant ID for backward compatibility
-tenant.default.id=default
+# Tenant for JAAS admin requests that omit X-Unomi-Tenant-Id (UNOMI-1008).
+# Defaults to "default"; set it to the tenant id chosen during the 3.0→4.0 migration.
+default.tenant.id=default
+----
 
+In 4.0 this setting only applies to JAAS admin requests. <<_v2_compatibility_mode,Single-tenant compatibility mode>>
+does not use it yet: its REST requests always run on tenant `default`, so keep the setting at `default` while that mode
+is on, or GraphQL admin queries will work on a different tenant than REST.
+
+Other tenant-related settings live in `etc/org.apache.unomi.tenant.cfg`:
+
+[source,properties]
+----
 # API key validity period
 tenant.apikey.validity.period=30
 tenant.apikey.validity.unit=DAYS
