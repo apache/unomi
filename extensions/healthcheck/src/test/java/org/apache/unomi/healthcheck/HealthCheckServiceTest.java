@@ -72,6 +72,18 @@ class HealthCheckServiceTest {
     }
 
     @Test
+    void disabledServiceReturnsNoResults() throws Exception {
+        HealthCheckConfig config = new HealthCheckConfig();
+        config.setEnabled(false);
+        config.setEnabledProviders(List.of("fast"));
+        config.setTimeout(TIMEOUT);
+        service.setConfig(config);
+        service.bind(new TestProvider("fast", () -> HealthCheckResponse.live("fast")));
+
+        assertEquals(List.of(), service.check());
+    }
+
+    @Test
     void secondCallWithinOneSecondReturnsTheCachedResults() {
         TestProvider fast = new TestProvider("fast", () -> HealthCheckResponse.live("fast"));
         service.bind(fast);

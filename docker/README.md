@@ -126,6 +126,9 @@ Note: Linux doesn't support the host.docker.internal DNS lookup method yet, it s
 ### Common Variables
 - `UNOMI_ROOT_PASSWORD`: Required admin (`karaf`) password — no known default
 - `UNOMI_HEALTHCHECK_PASSWORD`: Required health-check (`health`) password — no known default
+- `UNOMI_HEALTHCHECK_ENABLED`: Register `/health/check` (`true` by default). `false` turns the endpoint off; authentication cannot be disabled
+- `UNOMI_HEALTHCHECK_PROVIDERS`: Comma-separated provider list (defaults come from the cfg for Elasticsearch or OpenSearch)
+- `UNOMI_HEALTHCHECK_TIMEOUT`: Per-provider timeout in milliseconds (default `400`, range 1–60000)
 - `UNOMI_CLUSTER_NODEID`: Optional node id, unique per container. When unset, Unomi generates one on the first start and stores it inside the container; set this variable to keep the same id when the container is recreated
 - `UNOMI_CLUSTER_NODENAME`: Optional user friendly node name (defaults to the container host name); it is the prefix of a generated id
 - `UNOMI_AUTO_START`: Boolean to specify if unomi auto start with karaf (defaults to `true`)

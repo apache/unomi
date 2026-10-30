@@ -25,6 +25,7 @@ Complete tenant isolation for profiles, events, segments, rules, and schemas. Pu
 * Migrating from Unomi 2.x: <<_v2_compatibility_mode,single-tenant compatibility mode>> (`singletenantcompatibility.enabled` in `org.apache.unomi.rest.authentication.cfg`)
 * Public and GraphQL API key checks no longer read every tenant on each request, and refuse revoked and expired keys (https://issues.apache.org/jira/browse/UNOMI-1016[UNOMI-1016])
 * JAAS admin requests without `X-Unomi-Tenant-Id` use a configurable default tenant (default `default`), so 3.0 admin scripts keep seeing migrated data (https://issues.apache.org/jira/browse/UNOMI-1008[UNOMI-1008])
+* Health check environment variables `UNOMI_HEALTHCHECK_ENABLED`, `UNOMI_HEALTHCHECK_PROVIDERS` and `UNOMI_HEALTHCHECK_TIMEOUT` work again (https://issues.apache.org/jira/browse/UNOMI-1007[UNOMI-1007])
 
 ==== Security hardening (credentials, profile binding, privileged APIs)
 
