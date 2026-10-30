@@ -24,6 +24,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -90,6 +91,24 @@ public class AdminTenantSelectionTest {
 
         AdminTenantSelection allowed = AdminTenantSelection.select("system", "default", tenantService, true);
         assertEquals(AdminTenantSelection.Kind.SYSTEM, allowed.getKind());
+    }
+
+    @Test
+    public void systemScopedResourceGivesFullAdministratorSystemWithoutHeader() {
+        AdminTenantSelection selection = AdminTenantSelection.select(null, "default", tenantService, true, true);
+
+        assertEquals(AdminTenantSelection.Kind.SYSTEM, selection.getKind());
+        verifyNoInteractions(tenantService);
+    }
+
+    @Test
+    public void systemScopedResourceStillUsesDefaultForOtherSubjects() {
+        when(tenantService.getTenant("default")).thenReturn(defaultTenant);
+
+        AdminTenantSelection selection = AdminTenantSelection.select(null, "default", tenantService, false, true);
+
+        assertEquals(AdminTenantSelection.Kind.TENANT, selection.getKind());
+        assertEquals("default", selection.getTenantId());
     }
 
     @Test

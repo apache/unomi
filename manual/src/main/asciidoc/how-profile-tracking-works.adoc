@@ -127,7 +127,7 @@ Starting with Apache Unomi 4.0, tenant resolution is mandatory for all requests 
    * If the header is omitted, Unomi uses the configured admin default tenant (default `default`)
    * The system context needs an explicit `X-Unomi-Tenant-Id: system` and a full administrator
 
-Wrong credentials return HTTP 401 whether or not the tenant exists. A missing admin default tenant also fails with a clear error (HTTP 400 on REST).
+Wrong credentials return HTTP 401 whether or not the tenant exists. A missing admin default tenant also fails with HTTP 400, on REST and GraphQL. Tenant administration (`/cxs/tenants`) does not need the header: a full administrator then works in the system context, even before any tenant exists.
 ====
 
 ===== Example: Tenant Resolution
@@ -187,7 +187,7 @@ curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 }'
 ----
 
-The tenant is resolved from the `X-Unomi-Tenant-Id` header when using JAAS authentication.
+With JAAS authentication, the tenant comes from the `X-Unomi-Tenant-Id` header, or from the configured default tenant when the header is omitted.
 
 [plantuml]
 ----
@@ -215,7 +215,15 @@ else JAAS Auth with Tenant Header
     TenantService --> AuthenticationFilter: Tenant
     AuthenticationFilter -> ExecutionContextManager: Set tenant context
     AuthenticationFilter --> Client: Request authorized
-else No Tenant Resolved
+else JAAS Auth without Tenant Header
+    Client -> AuthenticationFilter: JAAS Auth
+    AuthenticationFilter -> TenantService: getTenant(defaultTenantId)
+    TenantService --> AuthenticationFilter: Tenant
+    AuthenticationFilter -> ExecutionContextManager: Set tenant context
+    AuthenticationFilter --> Client: Request authorized
+else JAAS Auth, tenant unknown or default tenant missing
+    AuthenticationFilter --> Client: 400 BAD REQUEST (403 without an administrator role)
+else Invalid or Missing Credentials
     AuthenticationFilter --> Client: 401 UNAUTHORIZED
 end
 

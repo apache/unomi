@@ -94,13 +94,13 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
             return;
         }
         boolean singleTenantMode = config.singletenantcompatibility_enabled();
-        String rawDefault = config.admin_default_tenant_id();
+        String rawDefault = config.default_tenant_id();
         String normalizedDefault = AdminTenantSelection.normalizeDefaultTenantId(rawDefault);
         if (rawDefault != null && !rawDefault.trim().isEmpty()
                 && !normalizedDefault.equals(rawDefault.trim())) {
-            LOGGER.warn("Ignoring admin.default.tenant.id value '{}'; using '{}'", rawDefault, normalizedDefault);
+            LOGGER.warn("Ignoring default.tenant.id value '{}'; using '{}'", rawDefault, normalizedDefault);
         }
-        LOGGER.info("Configuration updated - singleTenantCompatibilityModeEnabled: {}, adminDefaultTenantId: {}",
+        LOGGER.info("Configuration updated - singleTenantCompatibilityModeEnabled: {}, defaultTenantId: {}",
                 singleTenantMode, normalizedDefault);
         this.singleTenantCompatibilityModeEnabled = singleTenantMode;
         this.adminDefaultTenantId = normalizedDefault;
@@ -154,16 +154,20 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
         boolean singletenantcompatibility_enabled() default false;
 
         /**
-         * Tenant used for JAAS admin requests that omit {@code X-Unomi-Tenant-Id}.
+         * Default tenant ({@code default.tenant.id}). In 4.0 it is only used for JAAS admin requests that
+         * omit {@code X-Unomi-Tenant-Id}; single-tenant compatibility mode still uses tenant
+         * {@code "default"} on REST (UNOMI-1029).
          *
-         * @return the admin default tenant id
+         * @return the default tenant id
          */
         @AttributeDefinition(
-            name = "Admin default tenant id",
-            description = "Tenant used when a JAAS-authenticated admin request has no X-Unomi-Tenant-Id header "
-                    + "(UNOMI-1008). Defaults to \"default\", where a 3.0 migration puts the data. "
+            name = "Default tenant id",
+            description = "Tenant used when a JAAS-authenticated admin request (REST or GraphQL) has no "
+                    + "X-Unomi-Tenant-Id header (UNOMI-1008). Defaults to \"default\"; set it to the tenant id "
+                    + "chosen during a 3.0 migration. Not used yet by single-tenant compatibility mode, whose "
+                    + "REST requests always run on tenant \"default\" (UNOMI-1029). "
                     + "Cannot be \"system\": that context needs an explicit header."
         )
-        String admin_default_tenant_id() default AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID;
+        String default_tenant_id() default AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID;
     }
 }

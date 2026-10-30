@@ -471,8 +471,8 @@ curl -X GET "http://localhost:8181/cxs/tenants" \
 Authentication rules (Unomi 4.0):
 
 1. Public paths (for example `/cxs/context.json`, `/cxs/eventcollector`, `/cxs/client/*`) require a valid **public** API key via `X-Unomi-Api-Key` (unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled). Browser clients may call them from any origin, but only listed origins and Unomi's own origin may use the visitor cookie; see <<_public_tracker_origins,Websites on other origins>>.
-2. Private paths accept `tenantId:privateApiKey` Basic auth, or JAAS admin credentials. With JAAS, `X-Unomi-Tenant-Id` selects the tenant; when it is omitted, Unomi uses `org.apache.unomi.rest.authentication.adminDefaultTenantId` (env `UNOMI_REST_AUTHENTICATION_ADMINDEFAULTTENANTID`, default `default`). Send `X-Unomi-Tenant-Id: system` only when a full administrator must work in the system context.
-3. Tenant administration (`/cxs/tenants`) requires system administrator JAAS credentials.
+2. Private paths accept `tenantId:privateApiKey` Basic auth, or JAAS admin credentials. With JAAS, `X-Unomi-Tenant-Id` selects the tenant; when it is omitted, Unomi uses `org.apache.unomi.rest.authentication.defaultTenantId` (env `UNOMI_REST_AUTHENTICATION_DEFAULTTENANTID`, default `default`; not used yet by <<_v2_compatibility_mode,single-tenant compatibility mode>>, whose REST requests always run on `default`). Send `X-Unomi-Tenant-Id: system` only when a full administrator must work in the system context.
+3. Tenant administration (`/cxs/tenants`) requires system administrator JAAS credentials. Without `X-Unomi-Tenant-Id` it runs in the system context, so it works on a fresh install before any tenant exists.
 4. JAAS admin does **not** replace the public API key on public endpoints.
 ==== Public vs Private Endpoints
 

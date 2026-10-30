@@ -43,6 +43,7 @@ import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.PreMatching;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import java.io.IOException;
@@ -190,14 +191,14 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
                 try {
                     jaasAuthenticationFilter.filter(requestContext);
-                    // Get the subject from the security context after successful JAAS auth
-                    SecurityContext securityContext = JAXRSUtils.getCurrentMessage().get(SecurityContext.class);
-                    if (securityContext != null) {
-                        Subject subject = ((RolePrefixSecurityContextImpl) securityContext).getSubject();
+                    Subject subject = authenticatedJaasSubject();
+                    if (subject != null) {
                         // Set the authenticated subject in Unomi's security service
                         securityService.setCurrentSubject(subject);
 
-                        if (!applyAdminTenantContext(requestContext)) {
+                        // Tenant administration works on the tenant registry, so it runs in the
+                        // system context when no header is sent, even before any tenant exists.
+                        if (!applyAdminTenantContext(requestContext, true)) {
                             return;
                         }
                     }
@@ -265,14 +266,12 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                 // If tenant auth fails, try JAAS auth
                 try {
                     jaasAuthenticationFilter.filter(requestContext);
-                    // Get the subject from the security context after successful JAAS auth
-                    SecurityContext securityContext = JAXRSUtils.getCurrentMessage().get(SecurityContext.class);
-                    if (securityContext != null) {
-                        Subject subject = ((RolePrefixSecurityContextImpl) securityContext).getSubject();
+                    Subject subject = authenticatedJaasSubject();
+                    if (subject != null) {
                         // Set the authenticated subject in Unomi's security service
                         securityService.setCurrentSubject(subject);
 
-                        if (!applyAdminTenantContext(requestContext)) {
+                        if (!applyAdminTenantContext(requestContext, false)) {
                             return;
                         }
                     }
@@ -433,18 +432,32 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     }
 
     /**
+     * Subject left in the CXF security context by a successful JAAS login. Package-visible so unit
+     * tests can drive {@link #filter} without a CXF message.
+     *
+     * @return the subject, or {@code null} when JAAS did not authenticate the request
+     */
+    Subject authenticatedJaasSubject() {
+        SecurityContext securityContext = JAXRSUtils.getCurrentMessage().get(SecurityContext.class);
+        return securityContext != null ? ((RolePrefixSecurityContextImpl) securityContext).getSubject() : null;
+    }
+
+    /**
      * After JAAS succeeds, sets the execution context from {@code X-Unomi-Tenant-Id} or the
      * configured admin default tenant (UNOMI-1008). Aborts the request when the selection is invalid.
      * Package-visible for unit tests.
      *
+     * @param systemScopedResource {@code true} for tenant administration: a full administrator without
+     *                             a header then gets the system context instead of the admin default
      * @return {@code true} when a context was set; {@code false} when the request was aborted
      */
-    boolean applyAdminTenantContext(ContainerRequestContext requestContext) {
+    boolean applyAdminTenantContext(ContainerRequestContext requestContext, boolean systemScopedResource) {
         AdminTenantSelection selection = AdminTenantSelection.select(
                 requestContext.getHeaderString(UNOMI_TENANT_ID_HEADER),
                 restAuthenticationConfig.getAdminDefaultTenantId(),
                 tenantService,
-                securityService.hasRole(UnomiRoles.ADMINISTRATOR));
+                securityService.hasRole(UnomiRoles.ADMINISTRATOR),
+                systemScopedResource);
         switch (selection.getKind()) {
             case TENANT:
                 executionContextManager.setCurrentContext(
@@ -455,6 +468,12 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                 return true;
             case UNKNOWN_TENANT:
             case MISSING_DEFAULT:
+                if (!securityService.hasSystemAccess()) {
+                    // The authorization filter refuses such an account with 403 whatever the tenant.
+                    // Answer the same here, so that it cannot learn which tenants exist.
+                    abort(requestContext, Response.Status.FORBIDDEN, "User does not have required role");
+                    return false;
+                }
                 logger.warn("{}", selection.clientMessage());
                 abort(requestContext, Response.Status.BAD_REQUEST, selection.clientMessage());
                 return false;
@@ -472,7 +491,8 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     }
 
     private void abort(ContainerRequestContext requestContext, Response.Status status, String entity) {
-        Response.ResponseBuilder builder = Response.status(status).entity(entity);
+        // Plain text: the entity may echo the tenant header, and must never be rendered as HTML.
+        Response.ResponseBuilder builder = Response.status(status).entity(entity).type(MediaType.TEXT_PLAIN_TYPE);
         if (status == Response.Status.UNAUTHORIZED) {
             builder.header(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"" + REALM_NAME + "\"");
         }

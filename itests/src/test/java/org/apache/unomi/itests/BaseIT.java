@@ -1745,14 +1745,12 @@ public abstract class BaseIT extends KarafTestSupport {
                         request.setHeader("X-Unomi-Api-Key", testPublicKeyValue);
                     }
                 } else if (normalizedPath.startsWith("tenants")) {
-                    // Admin endpoint - use JAAS admin in the system context (tenant management).
+                    // Admin endpoint - use JAAS admin. No tenant header, as in the documented
+                    // examples: tenant administration then runs in the system context.
                     request.removeHeaders("X-Unomi-Api-Key");
                     if (request.getFirstHeader("Authorization") == null) {
                         String adminCredentials = BASIC_AUTH_USER_NAME + ":" + BASIC_AUTH_PASSWORD;
                         request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(adminCredentials.getBytes()));
-                    }
-                    if (request.getFirstHeader("X-Unomi-Tenant-Id") == null) {
-                        request.setHeader("X-Unomi-Tenant-Id", "system");
                     }
                 } else {
                     // Private endpoint - use private key

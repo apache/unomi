@@ -59,6 +59,10 @@ public class GraphQLServletSecurityValidator {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphQLServletSecurityValidator.class);
     private static final String UNOMI_TENANT_ID_HEADER = "X-Unomi-Tenant-Id";
+    private static final String TENANT_REJECTION_STATUS_ATTRIBUTE =
+            GraphQLServletSecurityValidator.class.getName() + ".tenantRejectionStatus";
+    private static final String TENANT_REJECTION_MESSAGE_ATTRIBUTE =
+            GraphQLServletSecurityValidator.class.getName() + ".tenantRejectionMessage";
 
     private final Parser parser;
     private final TenantService tenantService;
@@ -99,6 +103,9 @@ public class GraphQLServletSecurityValidator {
         }
         if (isAuthenticatedUser(req)) {
             return true;
+        }
+        if (sendTenantRejection(req, res)) {
+            return false;
         }
         // A 401 carries a challenge whether the header was missing or its credential was refused.
         res.addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
@@ -146,9 +153,26 @@ public class GraphQLServletSecurityValidator {
         if (isAuthenticatedUser(req)) {
             return true;
         } else {
-            res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+            if (!sendTenantRejection(req, res)) {
+                res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+            }
             return false;
         }
+    }
+
+    /**
+     * Sends the 400/403 recorded when valid JAAS credentials named an unusable tenant (UNOMI-1008),
+     * the same statuses REST returns, so callers can tell a tenant problem from wrong credentials.
+     *
+     * @return {@code true} when a response was sent
+     */
+    private boolean sendTenantRejection(HttpServletRequest req, HttpServletResponse res) throws IOException {
+        Object status = req.getAttribute(TENANT_REJECTION_STATUS_ATTRIBUTE);
+        if (!(status instanceof Integer)) {
+            return false;
+        }
+        res.sendError((Integer) status, (String) req.getAttribute(TENANT_REJECTION_MESSAGE_ATTRIBUTE));
+        return true;
     }
 
     /**
@@ -431,6 +455,13 @@ public class GraphQLServletSecurityValidator {
                 case FORBIDDEN_SYSTEM:
                     LOG.warn("Refusing GraphQL access to '{}': {}", username, selection.clientMessage());
                     securityService.clearCurrentSubject();
+                    if (req != null) {
+                        req.setAttribute(TENANT_REJECTION_STATUS_ATTRIBUTE,
+                                selection.getKind() == AdminTenantSelection.Kind.FORBIDDEN_SYSTEM
+                                        ? HttpServletResponse.SC_FORBIDDEN
+                                        : HttpServletResponse.SC_BAD_REQUEST);
+                        req.setAttribute(TENANT_REJECTION_MESSAGE_ATTRIBUTE, selection.clientMessage());
+                    }
                     return false;
                 default:
                     throw new IllegalStateException("Unexpected admin tenant selection: " + selection.getKind());

@@ -18,8 +18,8 @@ package org.apache.unomi.api.tenants;
 
 /**
  * Tenant used for JAAS-authenticated admin requests that omit {@code X-Unomi-Tenant-Id}
- * (UNOMI-1008). The default is {@value #DEFAULT_ADMIN_TENANT_ID}, where a 3.0→4.0 migration
- * puts the data.
+ * (UNOMI-1008). The default is {@value #DEFAULT_ADMIN_TENANT_ID}, which is also the default
+ * tenant id of a 3.0→4.0 migration; deployments that migrated into another tenant configure it.
  */
 public interface AdminTenantConfig {
 

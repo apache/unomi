@@ -74,6 +74,26 @@ public final class AdminTenantSelection {
      */
     public static AdminTenantSelection select(String headerTenantId, String adminDefaultTenantId,
                                               TenantService tenantService, boolean fullAdministrator) {
+        return select(headerTenantId, adminDefaultTenantId, tenantService, fullAdministrator, false);
+    }
+
+    /**
+     * Resolves the tenant for an authenticated admin request on a resource that may be system-scoped.
+     * Tenant administration manages the tenant registry, which lives in the system context and must
+     * work before any tenant exists. For such a resource a full administrator without a header gets
+     * the system context, as before UNOMI-1008; everyone else follows the tenant data rules.
+     *
+     * @param headerTenantId        value of {@code X-Unomi-Tenant-Id}, or {@code null}/blank when omitted
+     * @param adminDefaultTenantId  configured default when the header is omitted (already normalized)
+     * @param tenantService         loads tenants by id
+     * @param fullAdministrator     {@code true} when the subject holds {@code ROLE_UNOMI_ADMIN}
+     * @param systemScopedResource  {@code true} when the request targets system-level data such as
+     *                              the tenant registry
+     * @return the selection; never {@code null}
+     */
+    public static AdminTenantSelection select(String headerTenantId, String adminDefaultTenantId,
+                                              TenantService tenantService, boolean fullAdministrator,
+                                              boolean systemScopedResource) {
         if (headerTenantId != null && !headerTenantId.trim().isEmpty()) {
             String id = headerTenantId.trim();
             if (TenantService.SYSTEM_TENANT.equals(id)) {
@@ -87,6 +107,10 @@ public final class AdminTenantSelection {
                 return new AdminTenantSelection(Kind.UNKNOWN_TENANT, id);
             }
             return new AdminTenantSelection(Kind.TENANT, id);
+        }
+
+        if (systemScopedResource && fullAdministrator) {
+            return new AdminTenantSelection(Kind.SYSTEM, null);
         }
 
         String defaultId = normalizeDefaultTenantId(adminDefaultTenantId);

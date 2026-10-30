@@ -52,6 +52,8 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.refEq;
 import static org.mockito.Mockito.lenient;
@@ -92,6 +94,12 @@ class GraphQLServletSecurityValidatorTest {
         validator = new GraphQLServletSecurityValidator(
                 tenantService, securityService, executionContextManager,
                 () -> AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID);
+        // Back request attributes with a map, as a servlet container does.
+        Map<String, Object> attributes = new HashMap<>();
+        lenient().doAnswer(invocation -> attributes.put(invocation.getArgument(0), invocation.getArgument(1)))
+                .when(request).setAttribute(anyString(), any());
+        lenient().when(request.getAttribute(anyString()))
+                .thenAnswer(invocation -> attributes.get(invocation.<String>getArgument(0)));
     }
 
     private Tenant givenDefaultTenant() {
@@ -128,7 +136,24 @@ class GraphQLServletSecurityValidatorTest {
 
         assertFalse(authenticated);
         verify(executionContextManager, never()).setCurrentContext(refEq(ExecutionContext.systemContext()));
-        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        // Valid credentials, unusable tenant: 400 as on REST, not the 401 of wrong credentials.
+        verify(response).sendError(HttpServletResponse.SC_BAD_REQUEST, "Unknown tenant: not-a-real-tenant");
+        verify(response, never()).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+    }
+
+    @Test
+    void validate_withSystemTenantHeaderWithoutFullAdministrator_isForbidden() throws IOException {
+        lenient().when(securityService.hasRole(UnomiRoles.ADMINISTRATOR)).thenReturn(false);
+        lenient().when(securityService.hasRole(UnomiRoles.TENANT_ADMINISTRATOR)).thenReturn(true);
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
+        when(request.getHeader(TENANT_HEADER)).thenReturn("system");
+        when(tenantService.getTenantByApiKey(any(), eq(ApiKey.ApiKeyType.PRIVATE))).thenReturn(null);
+
+        boolean authenticated = validator.validate(null, null, request, response);
+
+        assertFalse(authenticated);
+        verify(executionContextManager, never()).setCurrentContext(any());
+        verify(response).sendError(eq(HttpServletResponse.SC_FORBIDDEN), anyString());
     }
 
     @Test
@@ -180,7 +205,8 @@ class GraphQLServletSecurityValidatorTest {
 
         assertFalse(authenticated);
         verify(executionContextManager, never()).setCurrentContext(any());
-        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        verify(response).sendError(HttpServletResponse.SC_BAD_REQUEST,
+                "Admin default tenant does not exist: " + AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID);
     }
 
     @Test
@@ -220,6 +246,7 @@ class GraphQLServletSecurityValidatorTest {
         verify(executionContextManager).createContext(AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID);
         verify(executionContextManager, never()).setCurrentContext(refEq(ExecutionContext.systemContext()));
         verify(response, never()).sendError(any(Integer.class));
+        verify(response, never()).sendError(anyInt(), any());
     }
 
     @Test
@@ -234,6 +261,7 @@ class GraphQLServletSecurityValidatorTest {
         assertTrue(authenticated);
         verify(executionContextManager).setCurrentContext(refEq(ExecutionContext.systemContext()));
         verify(response, never()).sendError(any(Integer.class));
+        verify(response, never()).sendError(anyInt(), any());
     }
 
     @Test
@@ -270,6 +298,23 @@ class GraphQLServletSecurityValidatorTest {
         assertTrue(authenticated);
         verify(securityService).setCurrentSubject(any(Subject.class));
         verify(response, never()).sendError(any(Integer.class));
+        verify(response, never()).sendError(anyInt(), any());
+    }
+
+    /** Valid credentials but a missing admin default tenant: 400 on the upgrade too, not 401. */
+    @Test
+    void validateWebSocketUpgrade_withMissingDefaultTenant_isBadRequest() throws IOException {
+        givenAdministratorRole();
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
+        when(tenantService.getTenantByApiKey(any(), eq(ApiKey.ApiKeyType.PRIVATE))).thenReturn(null);
+        when(tenantService.getTenant(AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID)).thenReturn(null);
+
+        boolean authenticated = validator.validateWebSocketUpgrade(request, response);
+
+        assertFalse(authenticated);
+        verify(response).sendError(HttpServletResponse.SC_BAD_REQUEST,
+                "Admin default tenant does not exist: " + AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID);
+        verify(response, never()).sendError(HttpServletResponse.SC_UNAUTHORIZED);
     }
 
     /** HTTP authentication scheme names are case-insensitive. */
@@ -286,6 +331,7 @@ class GraphQLServletSecurityValidatorTest {
         assertTrue(authenticated);
         verify(securityService).setCurrentSubject(any(Subject.class));
         verify(response, never()).sendError(any(Integer.class));
+        verify(response, never()).sendError(anyInt(), any());
     }
 
     @Test
@@ -438,6 +484,7 @@ class GraphQLServletSecurityValidatorTest {
 
         assertTrue(authenticated);
         verify(response, never()).sendError(any(Integer.class));
+        verify(response, never()).sendError(anyInt(), any());
     }
 
     /**
