@@ -46,6 +46,7 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.tenants.AdminTenantConfig;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.ApiKeyCreationResult;
 import org.apache.unomi.api.tenants.Tenant;
@@ -351,6 +352,11 @@ public abstract class BaseIT extends KarafTestSupport {
         securityService = getOsgiService(SecurityService.class, 600000);
         executionContextManager = getOsgiService(ExecutionContextManager.class, 600000);
         restAuthenticationConfig = getOsgiService(RestAuthenticationConfig.class, 600000);
+
+        // UNOMI-1008: JAAS requests without X-Unomi-Tenant-Id use the configured admin default
+        // tenant (default "default"). Create it here so HTTP admin calls in the suite and GraphQL
+        // checks that omit the header do not fail with "Admin default tenant does not exist".
+        ensureAdminDefaultTenantExists();
 
         // Create test tenant if not exists
         if (testTenant == null) {
@@ -894,6 +900,25 @@ public abstract class BaseIT extends KarafTestSupport {
             lastValue = value;
         } while (!predicate.test(value));
         return value;
+    }
+
+    /**
+     * Ensures the configured admin default tenant exists (UNOMI-1008). Fresh IT containers have no
+     * tenants until this suite creates them; without this, JAAS calls that omit {@code X-Unomi-Tenant-Id}
+     * (GraphQL waits, WebSocket upgrades, some RestAssured scripts) fail with HTTP 400.
+     */
+    private void ensureAdminDefaultTenantExists() {
+        String adminDefaultId = restAuthenticationConfig != null
+                ? restAuthenticationConfig.getAdminDefaultTenantId()
+                : AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID;
+        if (adminDefaultId == null || adminDefaultId.trim().isEmpty()) {
+            adminDefaultId = AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID;
+        }
+        if (tenantService.getTenant(adminDefaultId) == null) {
+            LOGGER.info("Creating admin default tenant '{}' for UNOMI-1008 IT coverage", adminDefaultId);
+            tenantService.createTenant(adminDefaultId, Collections.emptyMap());
+            persistenceService.refresh();
+        }
     }
 
     /**
@@ -1679,6 +1704,11 @@ public abstract class BaseIT extends KarafTestSupport {
                     String credentials = BASIC_AUTH_USER_NAME + ":" + BASIC_AUTH_PASSWORD;
                     request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
                 }
+                // Scope the admin call to the suite tenant unless the test already chose one
+                // (including "system"). Without this, UNOMI-1008 would put the call on "default".
+                if (request.getFirstHeader("X-Unomi-Tenant-Id") == null) {
+                    request.setHeader("X-Unomi-Tenant-Id", TEST_TENANT_ID);
+                }
                 break;
             case CUSTOM_BASIC:
                 // Remove any existing auth headers first
@@ -1714,13 +1744,15 @@ public abstract class BaseIT extends KarafTestSupport {
                     if (request.getFirstHeader("X-Unomi-Api-Key") == null && testPublicKeyValue != null) {
                         request.setHeader("X-Unomi-Api-Key", testPublicKeyValue);
                     }
-                } else if (normalizedPath.startsWith("/tenants")) {
-                    // Admin endpoint - use JAAS admin
+                } else if (normalizedPath.startsWith("tenants")) {
+                    // Admin endpoint - use JAAS admin in the system context (tenant management).
                     request.removeHeaders("X-Unomi-Api-Key");
-                    // Only set Authorization header if it's not already set
                     if (request.getFirstHeader("Authorization") == null) {
                         String adminCredentials = BASIC_AUTH_USER_NAME + ":" + BASIC_AUTH_PASSWORD;
                         request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(adminCredentials.getBytes()));
+                    }
+                    if (request.getFirstHeader("X-Unomi-Tenant-Id") == null) {
+                        request.setHeader("X-Unomi-Tenant-Id", "system");
                     }
                 } else {
                     // Private endpoint - use private key

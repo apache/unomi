@@ -48,8 +48,9 @@ public class RouterEndpointRoleSecurityIT extends BaseIT {
                     403, tenantAdmin.getStatusLine().getStatusCode());
         }
 
-        try (CloseableHttpResponse jaasAdmin = executeHttpRequest(
-                new HttpGet(getFullUrl("/cxs/importConfiguration")), AuthType.JAAS_ADMIN)) {
+        HttpGet jaasImport = new HttpGet(getFullUrl("/cxs/importConfiguration"));
+        jaasImport.setHeader("X-Unomi-Tenant-Id", "system");
+        try (CloseableHttpResponse jaasAdmin = executeHttpRequest(jaasImport, AuthType.JAAS_ADMIN)) {
             Assert.assertEquals("JAAS admin should list import configurations",
                     200, jaasAdmin.getStatusLine().getStatusCode());
         }
@@ -62,8 +63,9 @@ public class RouterEndpointRoleSecurityIT extends BaseIT {
             Assert.assertEquals(403, tenantAdmin.getStatusLine().getStatusCode());
         }
 
-        try (CloseableHttpResponse jaasAdmin = executeHttpRequest(
-                new HttpGet(getFullUrl("/cxs/exportConfiguration")), AuthType.JAAS_ADMIN)) {
+        HttpGet jaasExport = new HttpGet(getFullUrl("/cxs/exportConfiguration"));
+        jaasExport.setHeader("X-Unomi-Tenant-Id", "system");
+        try (CloseableHttpResponse jaasAdmin = executeHttpRequest(jaasExport, AuthType.JAAS_ADMIN)) {
             Assert.assertEquals(200, jaasAdmin.getStatusLine().getStatusCode());
         }
     }
@@ -83,6 +85,7 @@ public class RouterEndpointRoleSecurityIT extends BaseIT {
                 "----UnomiImportBoundaryJaas",
                 part("importConfigId", "text/plain", "rest-role-security-oneshot"),
                 filePart("file", "probe.csv", "text/csv", "col1\nvalue1\n"));
+        oneshotJaas.setHeader("X-Unomi-Tenant-Id", "system");
         try (CloseableHttpResponse jaasAdmin = executeHttpRequest(oneshotJaas, AuthType.JAAS_ADMIN)) {
             // Role gate is what we care about; missing config may yield 500 after auth succeeds.
             Assert.assertNotEquals(403, jaasAdmin.getStatusLine().getStatusCode());
@@ -102,6 +105,7 @@ public class RouterEndpointRoleSecurityIT extends BaseIT {
 
         HttpPost oneshotJaas = new HttpPost(getFullUrl("/cxs/exportConfiguration/oneshot"));
         oneshotJaas.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
+        oneshotJaas.setHeader("X-Unomi-Tenant-Id", "system");
         try (CloseableHttpResponse jaasAdmin = executeHttpRequest(oneshotJaas, AuthType.JAAS_ADMIN)) {
             Assert.assertNotEquals(403, jaasAdmin.getStatusLine().getStatusCode());
             Assert.assertNotEquals(401, jaasAdmin.getStatusLine().getStatusCode());
