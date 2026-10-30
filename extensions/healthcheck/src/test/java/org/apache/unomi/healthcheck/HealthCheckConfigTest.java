@@ -33,13 +33,14 @@ class HealthCheckConfigTest {
         assertTrue(HealthCheckConfig.parseEnabled("TRUE"));
         assertFalse(HealthCheckConfig.parseEnabled("false"));
         assertTrue(HealthCheckConfig.parseEnabled(null));
-        assertTrue(HealthCheckConfig.parseEnabled("maybe"));
+        assertTrue(HealthCheckConfig.parseEnabled(""));
+        assertFalse(HealthCheckConfig.parseEnabled("no"));
     }
 
     @Test
-    void providersKeepKnownNamesAndDropUnknown() {
-        assertEquals(List.of("cluster", "elasticsearch", "unomi"),
-                HealthCheckConfig.parseProviders("cluster, elasticsearch, unknown, unomi"));
+    void providersAreTrimmedDeduplicatedAndKeepCustomNames() {
+        assertEquals(List.of("cluster", "elasticsearch", "myCustomCheck"),
+                HealthCheckConfig.parseProviders("cluster, elasticsearch,, myCustomCheck, cluster"));
         assertEquals(List.of(), HealthCheckConfig.parseProviders(""));
         assertEquals(List.of("karaf", "opensearch"),
                 HealthCheckConfig.parseProviders("karaf,opensearch"));
@@ -59,11 +60,23 @@ class HealthCheckConfigTest {
         HealthCheckConfig config = new HealthCheckConfig();
         config.apply(Map.of(
                 HealthCheckConfig.ENABLED, "false",
-                HealthCheckConfig.PROVIDERS, "cluster,bogus,persistence",
+                HealthCheckConfig.PROVIDERS, "cluster,custom,persistence",
                 HealthCheckConfig.TIMEOUT, "1500"));
 
         assertFalse(config.isEnabled());
-        assertEquals(List.of("cluster", "persistence"), config.getEnabledProviders());
+        assertEquals(List.of("cluster", "custom", "persistence"), config.getEnabledProviders());
         assertEquals(1500, config.getTimeout());
+        assertEquals(HealthCheckConfig.DEFAULT_AUTH_REALM, config.get(HealthCheckConfig.CONFIG_AUTH_REALM));
+    }
+
+    @Test
+    void minimalBackendCfgOnlyNeedsTheProviderList() {
+        HealthCheckConfig config = new HealthCheckConfig();
+        config.apply(Map.of(HealthCheckConfig.PROVIDERS, "cluster,postgresql,unomi,persistence"));
+
+        assertTrue(config.isEnabled());
+        assertEquals(List.of("cluster", "postgresql", "unomi", "persistence"), config.getEnabledProviders());
+        assertEquals(HealthCheckConfig.DEFAULT_TIMEOUT_MS, config.getTimeout());
+        assertEquals("karaf", config.get(HealthCheckConfig.CONFIG_AUTH_REALM));
     }
 }

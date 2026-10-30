@@ -2044,6 +2044,24 @@ public interface HealthCheckProvider {
 
 Calls to provider are supposed to be done at a regular rate (every 15 seconds for example) and should be fast to execute. Feel free to include any caching strategy if needed.
 
+===== Health check for another persistence backend
+
+A persistence backend that is not packaged with Unomi (PostgreSQL, for example) integrates with the health check the same way as Elasticsearch and OpenSearch:
+
+. Register a `HealthCheckProvider` OSGi service whose `name()` is the backend id (for example `postgresql`). Import `org.apache.unomi.healthcheck` from the healthcheck bundle. The generic `persistence` provider already works with any `PersistenceService`.
+. Ship a Karaf feature (for example `unomi-healthcheck-postgresql`) with the healthcheck bundle and a `configfile` for `/etc/org.apache.unomi.healthcheck.cfg`. Only the provider list is required; `healthcheck.enabled`, `healthcheck.timeout` and `authentication.realm` default to `true`, `400` and `karaf`. Keep the placeholders so the `UNOMI_HEALTHCHECK_*` variables still apply:
++
+[source]
+----
+healthcheck.enabled = ${org.apache.unomi.healthcheck.enabled:-true}
+healthcheck.providers = ${org.apache.unomi.healthcheck.providers:-cluster,postgresql,unomi,persistence}
+healthcheck.timeout = ${org.apache.unomi.healthcheck.timeout:-400}
+authentication.realm = ${org.apache.unomi.security.realm:-karaf}
+----
+. Use that feature instead of `unomi-healthcheck-elasticsearch` or `unomi-healthcheck-opensearch` in the backend's distribution feature.
+
+The Elasticsearch and OpenSearch providers stay inactive when they are not listed, so they do not report errors on other backends.
+
 
 ==== Configuration
 
@@ -2051,13 +2069,12 @@ Healthcheck extension configuration is located in the file etc/org.apache.unomi.
 
 Extension can be enabled by setting the property `healthcheck.enabled` to `true` (default).
 Environment variable: `UNOMI_HEALTHCHECK_ENABLED` (maps to `org.apache.unomi.healthcheck.enabled`).
-Setting it to `false` unregisters `/health/check`. It never makes the endpoint answer without authentication.
-Invalid values fall back to `true` with a warning.
+Any other value than `true` (for example `false`) unregisters `/health/check`. It never makes the endpoint answer without authentication.
 
 By default the cfg file lists the providers for the active distribution
 (`cluster,elasticsearch,unomi,persistence` or `cluster,opensearch,unomi,persistence`).
 Override with `healthcheck.providers` or `UNOMI_HEALTHCHECK_PROVIDERS`
-(maps to `org.apache.unomi.healthcheck.providers`). Unknown names are ignored with a warning.
+(maps to `org.apache.unomi.healthcheck.providers`). Names must match the `name()` of a registered provider, including custom ones. A name that no installed bundle provides is skipped with a warning.
 The `karaf` probe is always reported as LIVE and does not need to be listed.
 
 The per-provider timeout is `healthcheck.timeout` in milliseconds (default `400`, allowed range 1–60000).

@@ -29,14 +29,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Health check configuration (UNOMI-1007). Values usually come from
  * {@code etc/org.apache.unomi.healthcheck.cfg}, which resolves
  * {@code org.apache.unomi.healthcheck.*} system properties — those can be set from
  * {@code UNOMI_HEALTHCHECK_ENABLED}, {@code UNOMI_HEALTHCHECK_PROVIDERS} and
- * {@code UNOMI_HEALTHCHECK_TIMEOUT}. Invalid values fall back to safe defaults with a warning.
+ * {@code UNOMI_HEALTHCHECK_TIMEOUT}. Any enabled value other than {@code true} disables the endpoint;
+ * an invalid timeout falls back to the default with a warning.
  * None of these settings can turn authentication off.
  */
 @Component(immediate = true, service = HealthCheckConfig.class, configurationPid = {"org.apache.unomi.healthcheck"})
@@ -61,7 +61,7 @@ public class HealthCheckConfig {
     public static final String PROVIDERS = "healthcheck.providers";
     public static final String TIMEOUT = "healthcheck.timeout";
 
-    /** Default when enabled is missing or invalid. */
+    /** Default when enabled is missing. */
     public static final boolean DEFAULT_ENABLED = true;
     /** Default provider timeout in milliseconds. */
     public static final int DEFAULT_TIMEOUT_MS = 400;
@@ -69,13 +69,8 @@ public class HealthCheckConfig {
     public static final int MIN_TIMEOUT_MS = 1;
     /** Highest accepted timeout (milliseconds). */
     public static final int MAX_TIMEOUT_MS = 60_000;
-
-    /**
-     * Names that may appear in {@link #PROVIDERS}. {@code karaf} is listed for documentation
-     * compatibility; the service always reports it. Unknown names are dropped with a warning.
-     */
-    public static final Set<String> KNOWN_PROVIDERS = Set.of(
-            "karaf", "cluster", "elasticsearch", "opensearch", "unomi", "persistence");
+    /** JAAS realm used when the cfg does not set {@link #CONFIG_AUTH_REALM}. */
+    public static final String DEFAULT_AUTH_REALM = "karaf";
 
     private Map<String, String> config = new HashMap<>();
     private boolean enabled = DEFAULT_ENABLED;
@@ -95,7 +90,12 @@ public class HealthCheckConfig {
      * @param config OSGi configuration entries; may be empty but not {@code null}
      */
     void apply(Map<String, String> config) {
-        this.setConfig(new HashMap<>(config));
+        Map<String, String> values = new HashMap<>(config);
+        String realm = values.get(CONFIG_AUTH_REALM);
+        if (realm == null || realm.trim().isEmpty()) {
+            values.put(CONFIG_AUTH_REALM, DEFAULT_AUTH_REALM);
+        }
+        this.setConfig(values);
         this.setEnabled(parseEnabled(config.get(ENABLED)));
         this.setEnabledProviders(parseProviders(config.get(PROVIDERS)));
         this.setTimeout(parseTimeout(config.get(TIMEOUT)));
@@ -112,8 +112,8 @@ public class HealthCheckConfig {
         if ("false".equals(value)) {
             return false;
         }
-        LOGGER.warn("Ignoring invalid healthcheck.enabled value '{}'; using {}", raw, DEFAULT_ENABLED);
-        return DEFAULT_ENABLED;
+        LOGGER.warn("Invalid healthcheck.enabled value '{}'; disabling the health check endpoint", raw);
+        return false;
     }
 
     static List<String> parseProviders(String raw) {
@@ -126,12 +126,7 @@ public class HealthCheckConfig {
             if (name.isEmpty()) {
                 continue;
             }
-            String key = name.toLowerCase(Locale.ROOT);
-            if (!KNOWN_PROVIDERS.contains(key)) {
-                LOGGER.warn("Ignoring unknown healthcheck provider '{}'", name);
-                continue;
-            }
-            providers.add(key);
+            providers.add(name);
         }
         return new ArrayList<>(providers);
     }

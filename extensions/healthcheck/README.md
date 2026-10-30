@@ -80,8 +80,10 @@ Configuration is located in the file `etc/org.apache.unomi.healthcheck.cfg` (ins
 
 | Property | Environment variable | Default | Notes |
 |---|---|---|---|
-| `healthcheck.enabled` | `UNOMI_HEALTHCHECK_ENABLED` | `true` | `false` unregisters the endpoint. Never disables authentication. |
-| `healthcheck.providers` | `UNOMI_HEALTHCHECK_PROVIDERS` | distribution-specific (see cfg) | Comma-separated: `cluster`, `elasticsearch` or `opensearch`, `unomi`, `persistence`. Unknown names are ignored. `karaf` is always reported. |
+| `healthcheck.enabled` | `UNOMI_HEALTHCHECK_ENABLED` | `true` | Any value other than `true` unregisters the endpoint. Never disables authentication. |
+| `healthcheck.providers` | `UNOMI_HEALTHCHECK_PROVIDERS` | distribution-specific (see cfg) | Comma-separated: `cluster`, `elasticsearch` or `opensearch`, `unomi`, `persistence`, or the `name()` of a custom provider. Names no installed bundle provides are skipped with a warning. `karaf` is always reported. |
 | `healthcheck.timeout` | `UNOMI_HEALTHCHECK_TIMEOUT` | `400` | Milliseconds, allowed range 1–60000. |
 
-These environment variables map through `custom.system.properties` to `org.apache.unomi.healthcheck.*`, which the cfg file resolves. Invalid values fall back to the safe defaults above with a warning.
+These environment variables map through `custom.system.properties` to `org.apache.unomi.healthcheck.*`, which the cfg file resolves. An invalid timeout falls back to the default above with a warning.
+
+Persistence backends that are not packaged with Unomi (PostgreSQL, for example) register their own `HealthCheckProvider` and ship their own healthcheck feature and cfg, like the Elasticsearch and OpenSearch ones. See "Health check for another persistence backend" in the configuration manual.
