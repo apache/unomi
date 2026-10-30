@@ -45,14 +45,17 @@
                     },
                     "consentTypes": []
                 },
-                "events:": [],
+                "events": [],
                 "wemInitConfig": {
                     "contextServerUrl": document.location.origin,
                     "timeoutInMilliseconds": "1500",
                     "contextServerCookieName": "context-profile-id",
                     "activateWem": true,
                     "trackerSessionIdCookieName": "unomi-tracker-test-session-id",
-                    "trackerProfileIdCookieName": "unomi-tracker-test-profile-id"
+                    "trackerProfileIdCookieName": "unomi-tracker-test-profile-id",
+                    // Tenant public API key, needed unless single-tenant compatibility mode is on.
+                    // For this sample page, pass it in the URL: /tracker/?apiKey=YOUR_PUBLIC_API_KEY
+                    "apiKey": new URLSearchParams(document.location.search).get("apiKey") || undefined
                 }
             }
 

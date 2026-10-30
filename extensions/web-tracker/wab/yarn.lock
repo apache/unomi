@@ -1019,10 +1019,9 @@ ansi-styles@^3.2.1:
   dependencies:
     color-convert "^1.9.0"
 
-apache-unomi-tracker@^1.1.0:
-  version "1.4.0"
-  resolved "https://registry.yarnpkg.com/apache-unomi-tracker/-/apache-unomi-tracker-1.4.0.tgz#50707986531fc4f5dec28cdf06a18e48610bcb78"
-  integrity sha512-5mYm1GQDrzUNxYcQymmGYYkk7AKjGakI5T3wUH4apjiRzKwPMiMyRvc45HvYNmcCGZoPlP1AEcimVu+2t0M7PA==
+"apache-unomi-tracker@git+https://github.com/apache/unomi-tracker.git#af3b91e3459aa2c6505517ed1ea7f94d55cce3a3":
+  version "2.0.0"
+  resolved "git+https://github.com/apache/unomi-tracker.git#af3b91e3459aa2c6505517ed1ea7f94d55cce3a3"
   dependencies:
     "@babel/runtime" "^7.18.9"
     es6-crawler-detect "^3.3.0"
