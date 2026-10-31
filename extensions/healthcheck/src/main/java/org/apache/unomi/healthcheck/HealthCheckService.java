@@ -30,6 +30,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -59,6 +61,8 @@ public class HealthCheckService {
     private volatile boolean initialized = false;
     private volatile boolean busy = false;
     private boolean registered = false;
+    /** Configured provider names already reported as not registered, so the warning is logged once. */
+    private final Set<String> missingProvidersReported = ConcurrentHashMap.newKeySet();
 
     @Reference
     protected HttpService httpService;
@@ -80,6 +84,7 @@ public class HealthCheckService {
     @Reference(service = HealthCheckConfig.class, policy = ReferencePolicy.DYNAMIC, updated = "setConfig")
     protected void setConfig(HealthCheckConfig config) throws ServletException, NamespaceException {
         this.config = config;
+        missingProvidersReported.clear();
         if (httpService == null ) {
             LOGGER.info("Healthcheck config with {} entrie(s) did not update the service as not fully started yet.", config.getSize());
             return;
@@ -120,6 +125,7 @@ public class HealthCheckService {
     protected void bind(HealthCheckProvider provider) {
         LOGGER.info("Binding provider {}", provider.name());
         providers.add(provider);
+        missingProvidersReported.remove(provider.name());
     }
 
     protected void unbind(HealthCheckProvider provider) {
@@ -154,6 +160,19 @@ public class HealthCheckService {
         return healthCache;
     }
 
+    /**
+     * Logs once per name a configured provider that no bundle registers, for example a typo or a
+     * backend-specific provider whose bundle is not installed (or not started yet). It is skipped.
+     */
+    private void reportMissingProviders(List<HealthCheckProvider> enabledProviders) {
+        for (String name : config.getEnabledProviders()) {
+            if (!"karaf".equals(name) && enabledProviders.stream().noneMatch(p -> p.name().equals(name))
+                    && missingProvidersReported.add(name)) {
+                LOGGER.warn("Healthcheck provider '{}' is configured but no provider with that name is registered; skipping it", name);
+            }
+        }
+    }
+
     private boolean shouldRefreshCache() {
         return !busy && isCacheExpired();
     }
@@ -169,6 +188,7 @@ public class HealthCheckService {
             List<HealthCheckProvider> enabledProviders = providers.stream()
                     .filter(p -> config.getEnabledProviders().contains(p.name()))
                     .toList();
+            reportMissingProviders(enabledProviders);
             List<Future<HealthCheckResponse>> futures = new ArrayList<>();
             for (HealthCheckProvider provider : enabledProviders) {
                 futures.add(executor.submit(provider::execute));

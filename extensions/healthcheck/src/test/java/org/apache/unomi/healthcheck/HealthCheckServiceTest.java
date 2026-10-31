@@ -72,6 +72,34 @@ class HealthCheckServiceTest {
     }
 
     @Test
+    void disabledServiceReturnsNoResults() throws Exception {
+        HealthCheckConfig config = new HealthCheckConfig();
+        config.setEnabled(false);
+        config.setEnabledProviders(List.of("fast"));
+        config.setTimeout(TIMEOUT);
+        service.setConfig(config);
+        service.bind(new TestProvider("fast", () -> HealthCheckResponse.live("fast")));
+
+        assertEquals(List.of(), service.check());
+    }
+
+    @Test
+    void externalBackendProviderRunsAndUnregisteredNamesAreSkipped() throws Exception {
+        HealthCheckConfig config = new HealthCheckConfig();
+        config.setEnabledProviders(List.of("postgresql", "notInstalled"));
+        config.setTimeout(TIMEOUT);
+        service.setConfig(config);
+        service.bind(new TestProvider("postgresql", () -> HealthCheckResponse.live("postgresql")));
+        service.bind(new TestProvider("elasticsearch", () -> HealthCheckResponse.live("elasticsearch")));
+
+        List<HealthCheckResponse> health = service.check();
+
+        assertEquals(2, health.size());
+        assertTrue(response(health, "karaf").isLive());
+        assertTrue(response(health, "postgresql").isLive());
+    }
+
+    @Test
     void secondCallWithinOneSecondReturnsTheCachedResults() {
         TestProvider fast = new TestProvider("fast", () -> HealthCheckResponse.live("fast"));
         service.bind(fast);

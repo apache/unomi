@@ -34,8 +34,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Dictionary;
+import java.util.Enumeration;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.concurrent.*;
 
 import static org.junit.Assert.fail;
@@ -55,6 +60,7 @@ public class HealthCheckIT extends BaseIT {
     private final static Logger LOGGER = LoggerFactory.getLogger(HealthCheckIT.class);
 
     protected static final String HEALTHCHECK_ENDPOINT = "/health/check";
+    private static final String HEALTHCHECK_PID = "org.apache.unomi.healthcheck";
 
     @Test
     public void testHealthCheck() {
@@ -137,6 +143,89 @@ public class HealthCheckIT extends BaseIT {
                 httpGet, AuthType.CUSTOM_BASIC, HEALTHCHECK_AUTH_USER_NAME, "wrong-password")) {
             Assert.assertEquals(401, response.getStatusLine().getStatusCode());
         }
+    }
+
+    @Test
+    public void testHealthCheck_disabledUnregistersEndpoint() throws Exception {
+        Dictionary<String, Object> original = healthCheckConfiguration();
+        try {
+            updateHealthCheckConfiguration(original, Map.of("healthcheck.enabled", "false"));
+            keepTrying("/health/check should be unregistered when the health check is disabled",
+                    () -> healthCheckStatus(AuthType.CUSTOM_BASIC, HEALTHCHECK_AUTH_PASSWORD), status -> status == 404,
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+            Assert.assertNotEquals(200, healthCheckStatus(AuthType.NONE, null));
+        } finally {
+            restoreHealthCheckConfiguration(original);
+        }
+    }
+
+    @Test
+    public void testHealthCheck_reducedProviderListAndCredentialsStillRequired() throws Exception {
+        Dictionary<String, Object> original = healthCheckConfiguration();
+        try {
+            updateHealthCheckConfiguration(original, Map.of("healthcheck.providers", "unomi,persistence,notInstalled"));
+            keepTrying("Health check should only report karaf and the configured providers",
+                    () -> probeNames(get(HEALTHCHECK_ENDPOINT, new TypeReference<List<HealthCheckResponse>>() {})),
+                    names -> Set.of("karaf", "unomi", "persistence").equals(names),
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+            Assert.assertEquals(401, healthCheckStatus(AuthType.NONE, null));
+            Assert.assertEquals(401, healthCheckStatus(AuthType.CUSTOM_BASIC, "wrong-password"));
+        } finally {
+            restoreHealthCheckConfiguration(original);
+        }
+    }
+
+    private Dictionary<String, Object> healthCheckConfiguration() throws IOException {
+        Dictionary<String, Object> properties = configurationAdmin.getConfiguration(HEALTHCHECK_PID, null).getProperties();
+        Assert.assertNotNull("Missing " + HEALTHCHECK_PID + " configuration", properties);
+        Dictionary<String, Object> copy = new Hashtable<>();
+        for (Enumeration<String> keys = properties.keys(); keys.hasMoreElements(); ) {
+            String key = keys.nextElement();
+            copy.put(key, properties.get(key));
+        }
+        return copy;
+    }
+
+    private void updateHealthCheckConfiguration(Dictionary<String, Object> original, Map<String, String> changes) throws IOException {
+        Dictionary<String, Object> updated = new Hashtable<>();
+        for (Enumeration<String> keys = original.keys(); keys.hasMoreElements(); ) {
+            String key = keys.nextElement();
+            updated.put(key, original.get(key));
+        }
+        changes.forEach(updated::put);
+        configurationAdmin.getConfiguration(HEALTHCHECK_PID, null).update(updated);
+    }
+
+    private void restoreHealthCheckConfiguration(Dictionary<String, Object> original) throws IOException, InterruptedException {
+        configurationAdmin.getConfiguration(HEALTHCHECK_PID, null).update(original);
+        keepTrying("Health check should be back to its original configuration",
+                () -> get(HEALTHCHECK_ENDPOINT, new TypeReference<List<HealthCheckResponse>>() {}),
+                response -> {
+                    try {
+                        assertHealthCheckLive(response);
+                        return true;
+                    } catch (AssertionError e) {
+                        return false;
+                    }
+                },
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+    }
+
+    private int healthCheckStatus(AuthType authType, String password) {
+        try {
+            HttpGet httpGet = new HttpGet(getFullUrl(HEALTHCHECK_ENDPOINT));
+            try (CloseableHttpResponse response = executeHttpRequest(httpGet, authType,
+                    authType == AuthType.NONE ? null : HEALTHCHECK_AUTH_USER_NAME, password)) {
+                return response.getStatusLine().getStatusCode();
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Health check request failed", e);
+            return -1;
+        }
+    }
+
+    private static Set<String> probeNames(List<HealthCheckResponse> response) {
+        return response == null ? null : response.stream().map(HealthCheckResponse::getName).collect(Collectors.toSet());
     }
 
     protected <T> T get(final String url, TypeReference<T> typeReference) {
