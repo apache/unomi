@@ -65,7 +65,8 @@ public class HealthCheckIT extends BaseIT {
     @Test
     public void testHealthCheck() {
         try {
-            List<HealthCheckResponse> response = get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {});
+            // When every probe is LIVE, clients (and HA proxies) expect HTTP 200 — same as Unomi 3.0.
+            List<HealthCheckResponse> response = get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {}, 200);
             LOGGER.info("configured persistence provider: {}", getPersistenceBackend().providerId());
             LOGGER.info("health check response: {}", response);
             Assert.assertNotNull(response);
@@ -87,11 +88,14 @@ public class HealthCheckIT extends BaseIT {
             List<Future<List<HealthCheckResponse>>> futures = new ArrayList<>();
             for (int i = 0; i < NB_ITERATIONS; i++) {
                 for (int j = 0; j < NB_THREADS; j++) {
-                    Future<List<HealthCheckResponse>> future = executorService.submit(() -> get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {}));
+                    // UNOMI-924: concurrent calls must not fail with HTTP 500; accept 200 or 206.
+                    Future<List<HealthCheckResponse>> future = executorService.submit(
+                            () -> get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {}, 200, 206));
                     futures.add(future);
                 }
                 for (Future<List<HealthCheckResponse>> future : futures) {
                     List<HealthCheckResponse> health = future.get(10, TimeUnit.SECONDS);
+                    Assert.assertNotNull("Concurrent health check returned null (unexpected HTTP status)", health);
                     assertHealthCheckLive(health);
                 }
                 Thread.sleep(10);
@@ -110,6 +114,7 @@ public class HealthCheckIT extends BaseIT {
 
     private void assertHealthCheckLive(List<HealthCheckResponse> response) {
         Assert.assertNotNull(response);
+        assertResponseFormatLike30(response);
         Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("karaf") && r.getStatus() == HealthCheckResponse.Status.LIVE));
         Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("unomi") && r.getStatus() == HealthCheckResponse.Status.LIVE));
         Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("persistence") && r.getStatus() == HealthCheckResponse.Status.LIVE));
@@ -134,6 +139,24 @@ public class HealthCheckIT extends BaseIT {
                     "Expected at least " + expectedMinProbes + " health probes, got " + response.size() + ": " + response,
                     response.size() >= expectedMinProbes);
         }
+    }
+
+    /**
+     * Wire format shared with Unomi 3.0: each item has {@code name}, {@code status},
+     * {@code collectingTime}; optional {@code data}; items sorted by name.
+     */
+    private static void assertResponseFormatLike30(List<HealthCheckResponse> response) {
+        List<String> names = new ArrayList<>();
+        for (HealthCheckResponse item : response) {
+            Assert.assertNotNull("Health check item missing name: " + item, item.getName());
+            Assert.assertFalse("Health check name must not be blank", item.getName().isBlank());
+            Assert.assertNotNull("Health check item missing status: " + item, item.getStatus());
+            Assert.assertTrue("collectingTime must be >= 0: " + item, item.getCollectingTime() >= 0);
+            names.add(item.getName());
+        }
+        List<String> sorted = new ArrayList<>(names);
+        sorted.sort(String::compareTo);
+        Assert.assertEquals("Health check items must be sorted by name (Unomi 3.0 servlet behaviour)", sorted, names);
     }
 
     @Test
@@ -165,7 +188,7 @@ public class HealthCheckIT extends BaseIT {
         try {
             updateHealthCheckConfiguration(original, Map.of("healthcheck.providers", "unomi,persistence,notInstalled"));
             keepTrying("Health check should only report karaf and the configured providers",
-                    () -> probeNames(get(HEALTHCHECK_ENDPOINT, new TypeReference<List<HealthCheckResponse>>() {})),
+                    () -> probeNames(get(HEALTHCHECK_ENDPOINT, new TypeReference<List<HealthCheckResponse>>() {}, 200, 206)),
                     names -> Set.of("karaf", "unomi", "persistence").equals(names),
                     DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
             Assert.assertEquals(401, healthCheckStatus(AuthType.NONE, null));
@@ -199,7 +222,7 @@ public class HealthCheckIT extends BaseIT {
     private void restoreHealthCheckConfiguration(Dictionary<String, Object> original) throws IOException, InterruptedException {
         configurationAdmin.getConfiguration(HEALTHCHECK_PID, null).update(original);
         keepTrying("Health check should be back to its original configuration",
-                () -> get(HEALTHCHECK_ENDPOINT, new TypeReference<List<HealthCheckResponse>>() {}),
+                () -> get(HEALTHCHECK_ENDPOINT, new TypeReference<List<HealthCheckResponse>>() {}, 200),
                 response -> {
                     try {
                         assertHealthCheckLive(response);
@@ -228,16 +251,22 @@ public class HealthCheckIT extends BaseIT {
         return response == null ? null : response.stream().map(HealthCheckResponse::getName).collect(Collectors.toSet());
     }
 
-    protected <T> T get(final String url, TypeReference<T> typeReference) {
+    protected <T> T get(final String url, TypeReference<T> typeReference, int... acceptedStatuses) {
+        int[] statuses = (acceptedStatuses == null || acceptedStatuses.length == 0)
+                ? new int[] { 200, 206 }
+                : acceptedStatuses;
         CloseableHttpResponse response = null;
         try {
             final HttpGet httpGet = new HttpGet(getFullUrl(url));
             response = executeHttpRequest(httpGet, AuthType.CUSTOM_BASIC, HEALTHCHECK_AUTH_USER_NAME, HEALTHCHECK_AUTH_PASSWORD);
-            if (response.getStatusLine().getStatusCode() == 200 || response.getStatusLine().getStatusCode() == 206) {
-                return getObjectMapper().readValue(response.getEntity().getContent(), typeReference);
-            } else {
-                return null;
+            int code = response.getStatusLine().getStatusCode();
+            for (int accepted : statuses) {
+                if (code == accepted) {
+                    return getObjectMapper().readValue(response.getEntity().getContent(), typeReference);
+                }
             }
+            LOGGER.error("Unexpected health check HTTP status {} (accepted {})", code, java.util.Arrays.toString(statuses));
+            return null;
         } catch (Exception e) {
             LOGGER.error("Error performing GET request with url {}", url, e);
         } finally {
