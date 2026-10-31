@@ -210,7 +210,10 @@ public class HealthCheckService {
                     return;
                 } catch (Exception e) {
                     LOGGER.error("Error while executing health check {}", provider.name(), e);
-                    health.add(provider.timeout());
+                    // Match provider-level errors (and 3.0's error field): status ERROR with
+                    // data.error. Do not report these as timeouts.
+                    String message = e.getMessage() != null ? e.getMessage() : e.getClass().getName();
+                    health.add(HealthCheckResponse.named(provider.name()).error().withData("error", message).build());
                 }
             }
             health.sort(Comparator.comparing(HealthCheckResponse::getName));

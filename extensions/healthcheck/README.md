@@ -42,15 +42,12 @@ All healthcheck can have a status :
 
 Any subsystem health check uses the configured timeout (default 400 ms); a check that does not answer in time is cancelled and returned as an error.
 
-Typical response to /health/check when unomi NOT started is :
+Typical response to `/health/check` when Unomi is not started yet (Elasticsearch distribution).
+Items are sorted by `name` (same as Unomi 3.0). Empty `data` is omitted; search backends may
+add cluster details when the probe answers:
 
 ```json
 [
-  {
-    "name":"karaf",
-    "status":"LIVE",
-    "collectingTime":0
-  },
   {
     "name":"cluster",
     "status":"DOWN",
@@ -59,7 +56,17 @@ Typical response to /health/check when unomi NOT started is :
   {
     "name":"elasticsearch",
     "status":"LIVE",
-    "collectingTime":6
+    "collectingTime":6,
+    "data":{
+      "cluster_name":"elasticsearch",
+      "status":"green",
+      "number_of_nodes":1
+    }
+  },
+  {
+    "name":"karaf",
+    "status":"LIVE",
+    "collectingTime":0
   },
   {
     "name":"persistence",
@@ -73,6 +80,9 @@ Typical response to /health/check when unomi NOT started is :
   }
 ]
 ```
+
+Each object has `name`, `status` (`DOWN` | `UP` | `LIVE` | `ERROR`), `collectingTime` (ms), and
+optional `data`. HTTP 200 only when every status is `LIVE`; otherwise 206.
 
 ## Configuration
 
