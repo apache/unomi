@@ -32,6 +32,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -212,7 +213,8 @@ public class HealthCheckService {
                     LOGGER.error("Error while executing health check {}", provider.name(), e);
                     // Match provider-level errors (and 3.0's error field): status ERROR with
                     // data.error. Do not report these as timeouts.
-                    String message = e.getMessage() != null ? e.getMessage() : e.getClass().getName();
+                    Throwable cause = e instanceof ExecutionException && e.getCause() != null ? e.getCause() : e;
+                    String message = cause.getMessage() != null ? cause.getMessage() : cause.getClass().getName();
                     health.add(HealthCheckResponse.named(provider.name()).error().withData("error", message).build());
                 }
             }

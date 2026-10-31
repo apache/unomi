@@ -22,10 +22,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Locks the JSON wire format of {@link HealthCheckResponse} to the 3.0 shape:
  * {@code name}, {@code status} (enum name), {@code collectingTime}, and optional {@code data}
- * (omitted when empty). Array order is alphabetical by name, as in 3.0's servlet.
+ * (omitted when empty).
  */
 class HealthCheckResponseJsonFormatTest {
 
@@ -81,24 +77,5 @@ class HealthCheckResponseJsonFormatTest {
                 HealthCheckResponse.named("elasticsearch").error().withData("error", "connection refused").build()));
         assertEquals("ERROR", node.get("status").asText());
         assertEquals("connection refused", node.get("data").get("error").asText());
-    }
-
-    @Test
-    void arrayIsSortedByNameLike30Servlet() throws Exception {
-        List<HealthCheckResponse> checks = new ArrayList<>();
-        checks.add(HealthCheckResponse.live("karaf"));
-        checks.add(HealthCheckResponse.down("cluster"));
-        checks.add(HealthCheckResponse.live("elasticsearch"));
-        checks.add(HealthCheckResponse.down("unomi"));
-        checks.add(HealthCheckResponse.down("persistence"));
-        checks.sort(Comparator.comparing(HealthCheckResponse::getName));
-
-        JsonNode array = mapper.readTree(mapper.writeValueAsString(checks));
-        assertEquals(5, array.size());
-        assertEquals("cluster", array.get(0).get("name").asText());
-        assertEquals("elasticsearch", array.get(1).get("name").asText());
-        assertEquals("karaf", array.get(2).get("name").asText());
-        assertEquals("persistence", array.get(3).get("name").asText());
-        assertEquals("unomi", array.get(4).get("name").asText());
     }
 }

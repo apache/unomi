@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -97,6 +98,35 @@ class HealthCheckServiceTest {
         assertEquals(2, health.size());
         assertTrue(response(health, "karaf").isLive());
         assertTrue(response(health, "postgresql").isLive());
+    }
+
+    @Test
+    void throwingProviderIsReportedAsErrorWithItsMessage() {
+        service.bind(new TestProvider("fast", () -> HealthCheckResponse.live("fast")));
+        service.bind(new TestProvider("blocked", () -> {
+            throw new IllegalStateException("boom");
+        }));
+
+        List<HealthCheckResponse> health = service.check();
+
+        HealthCheckResponse blocked = response(health, "blocked");
+        assertTrue(blocked.isError());
+        assertEquals("boom", blocked.getData().get("error"));
+        assertFalse(blocked.getData().containsKey("error.cause"));
+    }
+
+    @Test
+    void resultsAreSortedByName() throws Exception {
+        HealthCheckConfig config = new HealthCheckConfig();
+        config.setEnabledProviders(List.of("postgresql", "elasticsearch"));
+        config.setTimeout(TIMEOUT);
+        service.setConfig(config);
+        service.bind(new TestProvider("postgresql", () -> HealthCheckResponse.live("postgresql")));
+        service.bind(new TestProvider("elasticsearch", () -> HealthCheckResponse.live("elasticsearch")));
+
+        List<String> names = service.check().stream().map(HealthCheckResponse::getName).toList();
+
+        assertEquals(List.of("elasticsearch", "karaf", "postgresql"), names);
     }
 
     @Test
