@@ -115,9 +115,9 @@ public class SchemaServiceImpl extends AbstractMultiTypeCachingService implement
                     }
                 })
                 .withBundleItemProcessor((bundleContext, jsonSchemaWrapper) -> {
-                    contextManager.executeAsSystem(() -> {
-                        persistenceService.save(jsonSchemaWrapper);
-                    });
+                    // Use saveItem so new schemas get create audit and existing create audit is
+                    // carried over when a bundle re-saves its schemas (UNOMI-1026 / UNOMI-997).
+                    saveItem(jsonSchemaWrapper, JsonSchemaWrapper::getItemId, JsonSchemaWrapper.ITEM_TYPE);
                 })
                 // Efficient tenant-specific processing
                 .withTenantRefreshCallback((tenantId, oldTenantState, newTenantState) -> {

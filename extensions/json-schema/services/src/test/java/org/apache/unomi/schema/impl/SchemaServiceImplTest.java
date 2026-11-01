@@ -25,6 +25,7 @@ import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.ValidationException;
 import org.apache.unomi.schema.api.ValidationError;
 import org.apache.unomi.services.TestHelper;
+import org.apache.unomi.services.common.security.AuditServiceImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
@@ -91,7 +92,7 @@ public class SchemaServiceImplTest {
         // Create predefined schemas
         URL schemasUrl = getClass().getResource("/META-INF/cxs/schemas/predefined-schemas.json");
         when(bundleContext.getBundle().findEntries("META-INF/cxs/schemas", "*.json", true))
-                .thenReturn(Collections.enumeration(Arrays.asList(schemasUrl)));
+                .thenAnswer(invocation -> Collections.enumeration(Arrays.asList(schemasUrl)));
 
         schedulerService = TestHelper.createSchedulerService("schema-scheduler-node", persistenceService, contextManager, bundleContext, null, -1, true, true);
 
@@ -106,6 +107,7 @@ public class SchemaServiceImplTest {
         schemaService.setSchedulerService(schedulerService);
         schemaService.setBundleContext(bundleContext);
         schemaService.setCacheService(cacheService);
+        schemaService.setAuditService(new AuditServiceImpl());
         schemaService.postConstruct();
     }
 
@@ -117,6 +119,48 @@ public class SchemaServiceImplTest {
         if (schedulerService instanceof org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl) {
             ((org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl) schedulerService).preDestroy();
         }
+    }
+
+    @Test
+    public void testBundleCreatedSchemaHasCreateAudit() {
+        // UNOMI-1026: a predefined schema saved for the first time (as after a migration from a
+        // version without schemas) must get create audit.
+        contextManager.executeAsSystem(() -> {
+            JsonSchemaWrapper saved = persistenceService.load("https://unomi.apache.org/schemas/json/events/test", JsonSchemaWrapper.class);
+            assertNotNull("Predefined schema should already be persisted", saved);
+            assertEquals("system-bundle", saved.getCreatedBy());
+            assertNotNull(saved.getCreationDate());
+            assertEquals("system-bundle", saved.getLastModifiedBy());
+            assertNotNull(saved.getLastModificationDate());
+            return null;
+        });
+    }
+
+    @Test
+    public void testBundleResaveKeepsMigratedCreatedBy() {
+        // UNOMI-1026: reloading predefined schemas after migration must not wipe create audit.
+        final String schemaId = "https://unomi.apache.org/schemas/json/events/test";
+        final Date migratedAt = new Date(1_700_000_000_000L);
+
+        contextManager.executeAsSystem(() -> {
+            JsonSchemaWrapper existing = persistenceService.load(schemaId, JsonSchemaWrapper.class);
+            assertNotNull("Predefined schema should already be persisted", existing);
+            existing.setCreatedBy("system-migration-4.0.0");
+            existing.setCreationDate(migratedAt);
+            persistenceService.save(existing);
+            return null;
+        });
+
+        // Restart the service so the bundle's predefined schemas are loaded again, as after an upgrade.
+        schemaService.preDestroy();
+        schemaService.postConstruct();
+
+        contextManager.executeAsSystem(() -> {
+            JsonSchemaWrapper reloaded = persistenceService.load(schemaId, JsonSchemaWrapper.class);
+            assertEquals("system-migration-4.0.0", reloaded.getCreatedBy());
+            assertEquals(migratedAt, reloaded.getCreationDate());
+            return null;
+        });
     }
 
     @Test
