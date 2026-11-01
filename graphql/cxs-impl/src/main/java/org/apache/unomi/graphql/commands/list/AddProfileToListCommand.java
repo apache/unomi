@@ -31,7 +31,11 @@ import org.apache.unomi.services.UserListService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class AddProfileToListCommand extends BaseCommand<CDPList> {
@@ -76,11 +80,43 @@ public class AddProfileToListCommand extends BaseCommand<CDPList> {
             LOGGER.warn("Error processing addProfileToList event for profile {} and list {}", profileIDInput.getId(), listId);
         }
 
-        if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
-            profileService.save(event.getProfile());
+        // Prefer the profile instance returned by the event pipeline when it was updated.
+        final Profile profileToPersist =
+                ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED && event.getProfile() != null)
+                        ? event.getProfile()
+                        : profile;
+        // If rules/actions did not update list membership (definitions still loading, etc.),
+        // apply it here so findLists can see the profile (UNOMI-1027).
+        final boolean membershipChanged = ensureProfileJoinedList(profileToPersist, listId);
+
+        if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED || membershipChanged) {
+            profileService.save(profileToPersist);
         }
 
         return new CDPList(UserListConverter.convertToUnomiList(userList));
+    }
+
+    /**
+     * Ensures {@code systemProperties.lists} contains {@code listId}. Returns {@code true} when the
+     * profile was modified.
+     */
+    @SuppressWarnings("unchecked")
+    static boolean ensureProfileJoinedList(final Profile profile, final String listId) {
+        Map<String, Object> systemProperties = profile.getSystemProperties();
+        if (systemProperties == null) {
+            systemProperties = new HashMap<>();
+            profile.setSystemProperties(systemProperties);
+        }
+        List<String> lists = (List<String>) systemProperties.get("lists");
+        if (lists == null) {
+            lists = new ArrayList<>();
+            systemProperties.put("lists", lists);
+        }
+        if (!lists.contains(listId)) {
+            lists.add(listId);
+            return true;
+        }
+        return false;
     }
 
     public static Builder create() {

@@ -125,11 +125,34 @@ public class ConditionFactory {
     }
 
     public ConditionType getConditionType(final String typeId) {
-        final ConditionType conditionType = definitionsService.getConditionType(typeId);
-        if (conditionType == null) {
-            logNullConditionTypeDiagnostics(typeId);
+        ConditionType conditionType = definitionsService.getConditionType(typeId);
+        if (conditionType != null) {
+            return conditionType;
         }
-        return conditionType;
+        // Tenant-scoped lookup can miss system definitions while inheritance is still warming
+        // up. Falling back to the system tenant avoids a match-none query for the whole
+        // GraphQLListIT poll window (UNOMI-1027 / UNOMI-959).
+        conditionType = lookupConditionTypeAsSystem(typeId);
+        if (conditionType != null) {
+            return conditionType;
+        }
+        logNullConditionTypeDiagnostics(typeId);
+        return null;
+    }
+
+    private ConditionType lookupConditionTypeAsSystem(final String typeId) {
+        try {
+            final ServiceManager serviceManager = environment.getContext();
+            final ExecutionContextManager contextManager = serviceManager.getService(ExecutionContextManager.class);
+            if (contextManager == null) {
+                return null;
+            }
+            return contextManager.executeAsSystem(() -> definitionsService.getConditionType(typeId));
+        } catch (Exception e) {
+            DiagnosticLog.warn(LOGGER, "graphql-condition-type-system-fallback-error",
+                    "typeId", typeId, "error", e.getMessage());
+            return null;
+        }
     }
 
     /**

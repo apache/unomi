@@ -20,6 +20,7 @@ package org.apache.unomi.graphql.condition.factories;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,9 +28,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.function.Supplier;
+
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -51,6 +55,8 @@ class ConditionFactoryTest {
     private ServiceManager serviceManager;
     @Mock
     private DefinitionsService definitionsService;
+    @Mock
+    private ExecutionContextManager contextManager;
 
     @BeforeEach
     void setUp() {
@@ -63,15 +69,36 @@ class ConditionFactoryTest {
         final ConditionFactory factory = new ConditionFactory("profilePropertyCondition", environment);
 
         final ConditionType profilePropertyCondition = mock(ConditionType.class);
-        // First lookup happens before the definition is registered, second after: a live
-        // resolver must reflect the change without the factory being recreated.
-        when(definitionsService.getConditionType("profilePropertyCondition"))
-                .thenReturn(null, profilePropertyCondition);
+        when(serviceManager.getService(ExecutionContextManager.class)).thenReturn(contextManager);
+        // Cold cache: tenant and system both miss.
+        when(definitionsService.getConditionType("profilePropertyCondition")).thenReturn(null);
+        when(contextManager.executeAsSystem(any(Supplier.class))).thenReturn(null);
 
         assertNull(factory.getConditionType("profilePropertyCondition"),
                 "Type should be absent while the definition cache is still cold");
+
+        // Warm cache: live resolution without recreating the factory.
+        when(definitionsService.getConditionType("profilePropertyCondition")).thenReturn(profilePropertyCondition);
         assertSame(profilePropertyCondition, factory.getConditionType("profilePropertyCondition"),
                 "Type should be visible once the definition is registered (live resolution)");
+    }
+
+    @Test
+    void getConditionType_fallsBackToSystemTenantWhenTenantLookupMisses() {
+        final ConditionFactory factory = new ConditionFactory("profilePropertyCondition", environment);
+        final ConditionType profilePropertyCondition = mock(ConditionType.class);
+
+        when(definitionsService.getConditionType("profilePropertyCondition"))
+                .thenReturn(null) // tenant miss
+                .thenReturn(profilePropertyCondition); // system tenant hit inside executeAsSystem
+        when(serviceManager.getService(ExecutionContextManager.class)).thenReturn(contextManager);
+        when(contextManager.executeAsSystem(any(Supplier.class))).thenAnswer(invocation -> {
+            Supplier<?> supplier = invocation.getArgument(0);
+            return supplier.get();
+        });
+
+        assertSame(profilePropertyCondition, factory.getConditionType("profilePropertyCondition"),
+                "System-tenant fallback should avoid match-none while inheritance is warming (UNOMI-1027)");
     }
 
     @Test

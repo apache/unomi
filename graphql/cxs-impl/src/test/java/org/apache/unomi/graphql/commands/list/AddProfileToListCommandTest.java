@@ -32,6 +32,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
@@ -39,12 +47,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Guards the UNOMI-964 bitmask fix in {@link AddProfileToListCommand}. {@link EventService#send}
- * returns a bitmask; the profile must be persisted whenever the PROFILE_UPDATED bit is set,
- * even when it is OR-ed with other change flags. The previous {@code == PROFILE_UPDATED} check
- * silently dropped the save whenever another flag was also set.
+ * Guards the UNOMI-964 bitmask fix and the UNOMI-1027 fallback that applies list membership
+ * when the event/rules path does not update the profile.
  */
 @ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 class AddProfileToListCommandTest {
 
     private static final String LIST_ID = "testListId";
@@ -93,6 +100,7 @@ class AddProfileToListCommandTest {
         command().execute();
 
         verify(profileService).save(profile);
+        assertTrue(((List<?>) profile.getSystemProperties().get("lists")).contains(LIST_ID));
     }
 
     @Test
@@ -116,7 +124,23 @@ class AddProfileToListCommandTest {
     }
 
     @Test
-    void doesNotSaveProfile_whenEventReportsNoChange() {
+    void savesProfile_whenEventReportsNoChangeButMembershipWasMissing() {
+        // UNOMI-1027: rules/actions may not update the profile; membership is still required.
+        when(eventService.send(any(Event.class))).thenReturn(EventService.NO_CHANGE);
+
+        command().execute();
+
+        verify(profileService).save(profile);
+        assertTrue(((List<?>) profile.getSystemProperties().get("lists")).contains(LIST_ID));
+    }
+
+    @Test
+    void doesNotSaveProfile_whenAlreadyAMemberAndEventReportsNoChange() {
+        Map<String, Object> systemProperties = new HashMap<>();
+        List<String> lists = new ArrayList<>();
+        lists.add(LIST_ID);
+        systemProperties.put("lists", lists);
+        profile.setSystemProperties(systemProperties);
         when(eventService.send(any(Event.class))).thenReturn(EventService.NO_CHANGE);
 
         command().execute();
@@ -125,11 +149,10 @@ class AddProfileToListCommandTest {
     }
 
     @Test
-    void doesNotSaveProfile_whenProfileUpdatedBitIsNotSet() {
-        when(eventService.send(any(Event.class))).thenReturn(EventService.SESSION_UPDATED);
-
-        command().execute();
-
-        verify(profileService, never()).save(any(Profile.class));
+    void ensureProfileJoinedList_addsMissingMembership() {
+        Profile bare = new Profile(PROFILE_ID);
+        assertTrue(AddProfileToListCommand.ensureProfileJoinedList(bare, LIST_ID));
+        assertEquals(List.of(LIST_ID), bare.getSystemProperties().get("lists"));
+        assertFalse(AddProfileToListCommand.ensureProfileJoinedList(bare, LIST_ID));
     }
 }
