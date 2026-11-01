@@ -91,7 +91,7 @@ public class SchemaServiceImplTest {
         // Create predefined schemas
         URL schemasUrl = getClass().getResource("/META-INF/cxs/schemas/predefined-schemas.json");
         when(bundleContext.getBundle().findEntries("META-INF/cxs/schemas", "*.json", true))
-                .thenReturn(Collections.enumeration(Arrays.asList(schemasUrl)));
+                .thenAnswer(invocation -> Collections.enumeration(Arrays.asList(schemasUrl)));
 
         schedulerService = TestHelper.createSchedulerService("schema-scheduler-node", persistenceService, contextManager, bundleContext, null, -1, true, true);
 
@@ -121,7 +121,7 @@ public class SchemaServiceImplTest {
 
     @Test
     public void testBundleResaveKeepsMigratedCreatedBy() {
-        // UNOMI-1026: a bundle re-save after migration must not wipe create audit.
+        // UNOMI-1026: reloading predefined schemas after migration must not wipe create audit.
         final String schemaId = "https://unomi.apache.org/schemas/json/events/test";
         final Date migratedAt = new Date(1_700_000_000_000L);
 
@@ -131,16 +131,14 @@ public class SchemaServiceImplTest {
             existing.setCreatedBy("system-migration-4.0.0");
             existing.setCreationDate(migratedAt);
             persistenceService.save(existing);
+            return null;
+        });
 
-            JsonSchemaWrapper fromBundle = new JsonSchemaWrapper(
-                    schemaId, existing.getSchema(), existing.getTarget(), existing.getName(),
-                    existing.getExtendsSchemaId(), new Date());
-            fromBundle.setTenantId(SYSTEM_TENANT);
-            // Bundle JSON has no creator — same as a fresh predefined reload.
-            assertNull(fromBundle.getCreatedBy());
+        // Restart the service so the bundle's predefined schemas are loaded again, as after an upgrade.
+        schemaService.preDestroy();
+        schemaService.postConstruct();
 
-            schemaService.saveBundleSchema(fromBundle);
-
+        contextManager.executeAsSystem(() -> {
             JsonSchemaWrapper reloaded = persistenceService.load(schemaId, JsonSchemaWrapper.class);
             assertEquals("system-migration-4.0.0", reloaded.getCreatedBy());
             assertEquals(migratedAt, reloaded.getCreationDate());

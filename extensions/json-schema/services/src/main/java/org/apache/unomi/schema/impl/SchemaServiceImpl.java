@@ -117,7 +117,7 @@ public class SchemaServiceImpl extends AbstractMultiTypeCachingService implement
                 .withBundleItemProcessor((bundleContext, jsonSchemaWrapper) -> {
                     // Use saveItem so migrated createdBy/creationDate are carried over when a
                     // bundle re-saves its schemas after upgrade (UNOMI-1026 / UNOMI-997).
-                    saveBundleSchema(jsonSchemaWrapper);
+                    saveItem(jsonSchemaWrapper, JsonSchemaWrapper::getItemId, JsonSchemaWrapper.ITEM_TYPE);
                 })
                 // Efficient tenant-specific processing
                 .withTenantRefreshCallback((tenantId, oldTenantState, newTenantState) -> {
@@ -302,14 +302,6 @@ public class SchemaServiceImpl extends AbstractMultiTypeCachingService implement
         }
 
         throw new ValidationException("Schema not found for event type: " + eventType);
-    }
-
-    /**
-     * Persists a schema loaded from a bundle. Package-visible so unit tests can re-save a
-     * predefined schema the same way the bundle processor does (UNOMI-1026).
-     */
-    void saveBundleSchema(JsonSchemaWrapper jsonSchemaWrapper) {
-        saveItem(jsonSchemaWrapper, JsonSchemaWrapper::getItemId, JsonSchemaWrapper.ITEM_TYPE);
     }
 
     @Override
