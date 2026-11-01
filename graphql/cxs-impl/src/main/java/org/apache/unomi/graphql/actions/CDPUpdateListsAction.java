@@ -31,7 +31,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A rule action that can add a profile to a list
+ * A rule action that can add a profile to a list or remove it from one.
+ * <p>
+ * Builds a <em>new</em> {@code systemProperties.lists} list before changing it. Mutating the
+ * profile's existing list in place made {@code updateProperties} see no change (UNOMI-1030).
  */
 @Component(service = ActionExecutor.class, immediate = true, property = {"actionExecutorId=updateLists"})
 public class CDPUpdateListsAction implements ActionExecutor {
@@ -44,28 +47,32 @@ public class CDPUpdateListsAction implements ActionExecutor {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public int execute(Action action, Event event) {
         List<String> joinLists = (List<String>) event.getProperty("joinLists");
         List<String> leaveLists = (List<String>) event.getProperty("leaveLists");
 
         final Profile profile = event.getProfile();
-        List<String> existingLists = (List<String>) profile.getSystemProperties().get("lists");
-        if (existingLists == null) {
-            existingLists = new ArrayList<>();
-        }
-        if (!existingLists.isEmpty() && leaveLists != null && !leaveLists.isEmpty()) {
-            existingLists.removeAll(leaveLists);
+        Map<String, Object> systemProperties = profile.getSystemProperties();
+        List<String> existingLists = systemProperties == null
+                ? null
+                : (List<String>) systemProperties.get("lists");
+        // Copy so PropertyHelper compares against the unmodified profile value (UNOMI-1030).
+        List<String> updatedLists = existingLists == null ? new ArrayList<>() : new ArrayList<>(existingLists);
+
+        if (!updatedLists.isEmpty() && leaveLists != null && !leaveLists.isEmpty()) {
+            updatedLists.removeAll(leaveLists);
         }
         if (joinLists != null && !joinLists.isEmpty()) {
             for (String newListIdentifier : joinLists) {
-                if (!existingLists.contains(newListIdentifier)) {
-                    existingLists.add(newListIdentifier);
+                if (!updatedLists.contains(newListIdentifier)) {
+                    updatedLists.add(newListIdentifier);
                 }
             }
         }
 
         final Map<String, Object> propertyToUpdate = new HashMap<>();
-        propertyToUpdate.put("systemProperties.lists", existingLists);
+        propertyToUpdate.put("systemProperties.lists", updatedLists);
 
         final Event updatePropertiesEvent = EventBuilder.create("updateProperties", profile)
                 .setPropertiesToUpdate(propertyToUpdate)
