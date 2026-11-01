@@ -30,6 +30,7 @@
     <reference id="tracerService" interface="org.apache.unomi.tracing.api.TracerService"/>
     <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService" timeout="2000"/>
     <reference id="cacheService" interface="org.apache.unomi.api.services.cache.MultiTypeCacheService" />
+    <reference id="auditService" interface="org.apache.unomi.api.tenants.AuditService" availability="optional"/>
 
     <!-- Configuration -->
     <cm:property-placeholder persistent-id="org.apache.unomi.schema" update-strategy="reload">
@@ -50,6 +51,7 @@
         <property name="schedulerService" ref="schedulerService"/>
         <property name="bundleContext" ref="blueprintBundleContext" />
         <property name="cacheService" ref="cacheService" />
+        <property name="auditService" ref="auditService"/>
     </bean>
 
     <!-- Services -->

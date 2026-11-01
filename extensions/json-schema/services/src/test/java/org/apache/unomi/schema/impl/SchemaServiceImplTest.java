@@ -25,6 +25,7 @@ import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.ValidationException;
 import org.apache.unomi.schema.api.ValidationError;
 import org.apache.unomi.services.TestHelper;
+import org.apache.unomi.services.common.security.AuditServiceImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
@@ -106,6 +107,7 @@ public class SchemaServiceImplTest {
         schemaService.setSchedulerService(schedulerService);
         schemaService.setBundleContext(bundleContext);
         schemaService.setCacheService(cacheService);
+        schemaService.setAuditService(new AuditServiceImpl());
         schemaService.postConstruct();
     }
 
@@ -117,6 +119,21 @@ public class SchemaServiceImplTest {
         if (schedulerService instanceof org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl) {
             ((org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl) schedulerService).preDestroy();
         }
+    }
+
+    @Test
+    public void testBundleCreatedSchemaHasCreateAudit() {
+        // UNOMI-1026: a predefined schema saved for the first time (as after a migration from a
+        // version without schemas) must get create audit.
+        contextManager.executeAsSystem(() -> {
+            JsonSchemaWrapper saved = persistenceService.load("https://unomi.apache.org/schemas/json/events/test", JsonSchemaWrapper.class);
+            assertNotNull("Predefined schema should already be persisted", saved);
+            assertEquals("system-bundle", saved.getCreatedBy());
+            assertNotNull(saved.getCreationDate());
+            assertEquals("system-bundle", saved.getLastModifiedBy());
+            assertNotNull(saved.getLastModificationDate());
+            return null;
+        });
     }
 
     @Test
