@@ -32,6 +32,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -74,15 +76,18 @@ public class HealthCheckServlet extends HttpServlet {
             response.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
-        List<HealthCheckResponse> checks = service.check();
+        // Sort a mutable copy (3.0 sorted in the servlet). The service cache is an
+        // unmodifiable list, so sorting it in place would fail.
+        List<HealthCheckResponse> checks = new ArrayList<>(service.check());
+        checks.sort(Comparator.comparing(HealthCheckResponse::getName));
         response.getWriter().println(mapper.writeValueAsString(checks));
         response.setContentType("application/json");
         response.setHeader("Cache-Control", "no-cache");
-            if (checks.stream().allMatch(HealthCheckResponse::isLive)) {
-                response.setStatus(HttpServletResponse.SC_OK);
-            } else {
-                response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
-            }
+        if (checks.stream().allMatch(HealthCheckResponse::isLive)) {
+            response.setStatus(HttpServletResponse.SC_OK);
+        } else {
+            response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
+        }
         response.flushBuffer();
     }
 }
