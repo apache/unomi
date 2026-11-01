@@ -184,7 +184,7 @@ Invalid segment condition:
 - Required parameter is missing (parameter: propertyName, condition: profilePropertyCondition, location: condition[profilePropertyCondition].propertyName)
 ----
 
-REST clients receive this text in the error response body when the save fails.
+REST clients receive a generic `badRequest` response when the save fails. The detailed text above is written to the server log.
 
 ==== Rules and invalid conditions
 

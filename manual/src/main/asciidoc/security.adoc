@@ -44,7 +44,7 @@ or not the tenant exists. For tenant data, the system context is never the silen
 (`/cxs/tenants`) is the exception: it manages the tenant registry, so a full administrator without the header works in
 the system context, even before any tenant exists.
 
-Temporary exception: <<_v2_compatibility_mode,V2 compatibility mode>> allows public endpoints without API keys while migrating 2.x clients.
+Temporary exception: <<_v2_compatibility_mode,single-tenant compatibility mode>> allows public endpoints without API keys while migrating Unomi 2 or Unomi 3 clients.
 In that mode every REST request, JAAS admin requests included, runs on tenant `default` and the default tenant setting
 is not used yet; GraphQL still follows the setting, so keep it at `default` while the mode is on.
 
@@ -76,9 +76,9 @@ else Private path + Basic tenantId:privateKey
 else Private path + JAAS
   Auth -> Tenant : X-Unomi-Tenant-Id or admin default tenant
   Auth -> API : Tenant context (system only with explicit header)
-else V2 compatibility mode
+else single-tenant compatibility mode
   Auth -> Tenant : Compatibility tenant
-  Auth -> API : Legacy 2.x-style access
+  Auth -> API : Legacy Unomi 2 / 3 style access
 else
   Auth --> Client : 401 Unauthorized
 end
@@ -146,7 +146,7 @@ end note
 
 Configuration keys live in `etc/org.apache.unomi.rest.authentication.cfg` and `custom.system.properties`. Tenant API key settings are in `etc/org.apache.unomi.tenant.cfg`.
 
-For tenant API keys, roles (`ROLE_UNOMI_TENANT_USER`, `ROLE_UNOMI_TENANT_ADMIN`, system administrator), operation permissions, and curl examples, see <<_multitenancy,Multi-tenancy>> and <<_configuration,Configuration>> (tenant management). For migration from 2.x, see <<_v2_compatibility_mode,V2 compatibility mode>> and <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>>.
+For tenant API keys, roles (`ROLE_UNOMI_TENANT_USER`, `ROLE_UNOMI_TENANT_ADMIN`, system administrator), operation permissions, and curl examples, see <<_multitenancy,Multi-tenancy>> and <<_configuration,Configuration>> (tenant management). For migrating Unomi 2 or Unomi 3 clients, see <<_v2_compatibility_mode,single-tenant compatibility mode>> and <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>>.
 
 ===== Multi-tenancy isolation
 

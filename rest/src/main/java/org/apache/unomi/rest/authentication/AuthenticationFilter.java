@@ -294,16 +294,16 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     /**
      * Handle authentication in single-tenant compatibility mode.
      * In this mode:
-     * - Public endpoints (like /context.json) require no authentication (like V2)
-     * - Protected events require IP + X-Unomi-Peer (like V2)
-     * - Private endpoints require system administrator authentication (like V2)
-     * - A default tenant is automatically used for all operations
+     * - Public endpoints (like /context.json) require no authentication (like Unomi 2 / 3)
+     * - Protected events require IP + X-Unomi-Peer (like Unomi 2 / 3)
+     * - Private endpoints require system administrator authentication (like Unomi 2 / 3)
+     * - Tenant {@code default} is used for all REST operations
      */
     private void handleSingleTenantCompatibilityMode(ContainerRequestContext requestContext, String path) throws IOException {
-        // For public paths, allow access without authentication (like V2)
+        // For public paths, allow access without authentication (like Unomi 2 / 3)
         if (isPublicPath(requestContext)) {
             String tenantId = COMPATIBILITY_TENANT_ID;
-            // V2 knew no tenant, so a V2 client cannot name one and cannot create one. Create the
+            // Legacy Unomi 2 / 3 clients do not name a tenant and cannot create one. Create the
             // tenant this mode runs on, rather than refuse every request until an operator creates
             // it by hand.
             try {
@@ -327,7 +327,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             return;
         }
 
-        // For private endpoints, require system administrator authentication (like V2)
+        // For private endpoints, require system administrator authentication (like Unomi 2 / 3)
         String authHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
         if (authHeader != null && authHeader.startsWith(BASIC_AUTH_PREFIX)) {
             if (rejectBlankBasicAuthPassword(requestContext, authHeader)) {
@@ -346,7 +346,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                 Subject jaasSubject = ((RolePrefixSecurityContextImpl) securityContext).getSubject();
 
                 // Private endpoints in single-tenant compatibility mode require system administrator
-                // authentication (like V2) — a JAAS login alone isn't enough, since any Karaf
+                // authentication (like Unomi 2 / 3) — a JAAS login alone isn't enough, since any Karaf
                 // user (not just admins) can authenticate against the realm.
                 if (!securityService.extractRolesFromSubject(jaasSubject).contains(UnomiRoles.ADMINISTRATOR)) {
                     logger.debug("single-tenant compatibility mode: authenticated user lacks administrator role, denying access to private endpoint");

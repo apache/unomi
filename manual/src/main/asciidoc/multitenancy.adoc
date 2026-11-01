@@ -73,6 +73,11 @@ curl -X POST http://localhost:8181/cxs/tenants \
 
 `publicCorsAllowedOrigins` is optional: it lists the websites that may use the visitor cookie with this tenant's key (see <<_public_tracker_tenant_origins,Websites listed by each tenant>>). An invalid entry is refused with `400`.
 
+Protected events in normal multi-tenant mode are controlled on the tenant with `restrictedEventTypes` (event type ids
+that need an authorized source IP) and `authorizedIPs` (addresses or CIDR ranges). Update the tenant after creation to
+set them. In <<_v2_compatibility_mode,single-tenant compatibility mode>>, peer servers still use `X-Unomi-Peer` instead;
+see <<_secured_events_configuration,Secured events configuration>>.
+
 The create response includes the tenant with **masked** API key metadata only (plaintext secrets are not returned and cannot be recovered from storage):
 
 [source,json]

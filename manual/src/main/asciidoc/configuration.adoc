@@ -172,11 +172,31 @@ Authentication Rules:
 3. Private paths require both tenantId and private API key
 4. All other requests are denied
 
+[#_secured_events_configuration]
 === Secured events configuration
 
-Apache Unomi secures some events by default. It comes out of the box with a default configuration that you can adjust
-by using the centralized configuration file override in `$MY_KARAF_HOME/etc/unomi.custom.system.properties`
+Apache Unomi can restrict some event types so only callers from allowed IP addresses may send them. How that works
+depends on whether <<_v2_compatibility_mode,single-tenant compatibility mode>> is on.
 
+==== Normal multi-tenant mode
+
+In normal 4.0 mode, each tenant controls protected events with two fields on the tenant object (REST `/cxs/tenants` or
+`crud update tenant`):
+
+* `restrictedEventTypes` — event type ids that need an authorized source IP (for example `login`, `updateProperties`)
+* `authorizedIPs` — IP addresses or CIDR ranges allowed to send those events
+
+If a tenant lists an event type in `restrictedEventTypes`, Unomi accepts that event only when the caller IP matches
+`authorizedIPs`. An empty `authorizedIPs` list means no caller IP is accepted for those events. See
+<<_multitenancy,Multi-tenancy>> for tenant updates.
+
+The global third-party provider files below are **not** used in this mode.
+
+==== Single-tenant compatibility mode (third-party / peer servers)
+
+When single-tenant compatibility mode is enabled, Unomi keeps the Unomi 2 / Unomi 3 third-party provider model. Peer
+servers send the secret in the `X-Unomi-Peer` HTTP header. You can adjust the defaults with the centralized configuration
+file override in `$MY_KARAF_HOME/etc/unomi.custom.system.properties`.
 
 You can find the default configuration in the following file:
 
@@ -189,7 +209,7 @@ The properties start with the prefix : `org.apache.unomi.thirdparty.*` and here 
     org.apache.unomi.thirdparty.provider1.allowedEvents=${env:UNOMI_THIRDPARTY_PROVIDER1_ALLOWEDEVENTS:-login,updateProperties}
 
 The events set in allowedEvents will be secured and will only be accepted if the call comes from the specified IP
-address, and if the secret-key is passed in the X-Unomi-Api-Key HTTP request header. The "env:" part means that it will
+address, and if the secret is passed in the `X-Unomi-Peer` HTTP request header. The "env:" part means that it will
 attempt to read an environment variable by that name, and if it's not found it will default to the value after the ":-"
 marker.
 
@@ -223,8 +243,9 @@ the changes when upgrading) :
 
     $MY_KARAF_HOME/etc/org.apache.unomi.thirdparty.cfg
 
-Usually, login events, which operate on profiles and do merge on protected properties, must be secured. For each
-trusted third party server, you need to add these 3 lines :
+These provider settings apply only while single-tenant compatibility mode is enabled. Usually, login events, which operate
+on profiles and do merge on protected properties, must be secured. For each trusted third party server, you need to add
+these 3 lines :
 
 [source]
 ----
@@ -232,6 +253,8 @@ thirdparty.provider1.key=secret-key
 thirdparty.provider1.ipAddresses=127.0.0.1,::1
 thirdparty.provider1.allowedEvents=login,updateProperties
 ----
+
+Full peer abilities and troubleshooting for this mode are in <<_v2_compatibility_mode,single-tenant compatibility mode>>.
 
 
 === Installing the MaxMind GeoIPLite2 IP lookup database
@@ -470,7 +493,7 @@ curl -X GET "http://localhost:8181/cxs/tenants" \
 
 Authentication rules (Unomi 4.0):
 
-1. Public paths (for example `/cxs/context.json`, `/cxs/eventcollector`, `/cxs/client/*`) require a valid **public** API key via `X-Unomi-Api-Key` (unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled). Browser clients may call them from any origin, but only listed origins and Unomi's own origin may use the visitor cookie; see <<_public_tracker_origins,Websites on other origins>>.
+1. Public paths (for example `/cxs/context.json`, `/cxs/eventcollector`, `/cxs/client/*`) require a valid **public** API key via `X-Unomi-Api-Key` (unless <<_v2_compatibility_mode,single-tenant compatibility mode>> is enabled). Browser clients may call them from any origin, but only listed origins and Unomi's own origin may use the visitor cookie; see <<_public_tracker_origins,Websites on other origins>>.
 2. Private paths accept `tenantId:privateApiKey` Basic auth, or JAAS admin credentials. With JAAS, `X-Unomi-Tenant-Id` selects the tenant; when it is omitted, Unomi uses `org.apache.unomi.rest.authentication.defaultTenantId` (env `UNOMI_REST_AUTHENTICATION_DEFAULTTENANTID`, default `default`; not used yet by <<_v2_compatibility_mode,single-tenant compatibility mode>>, whose REST requests always run on `default`). Send `X-Unomi-Tenant-Id: system` only when a full administrator must work in the system context.
 3. Tenant administration (`/cxs/tenants`) requires system administrator JAAS credentials. Without `X-Unomi-Tenant-Id` it runs in the system context, so it works on a fresh install before any tenant exists.
 4. JAAS admin does **not** replace the public API key on public endpoints.

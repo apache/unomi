@@ -311,7 +311,7 @@ public class V2ThirdPartyConfigService {
 
         Optional<ProviderConfig> match = findProviderByKey(providerKey);
         if (match.isEmpty()) {
-            LOGGER.debug("V2 compatibility mode: Unknown provider key: {}", SecurityUtils.maskSecret(providerKey));
+            LOGGER.debug("single-tenant compatibility mode: Unknown provider key: {}", SecurityUtils.maskSecret(providerKey));
             return false;
         }
 
@@ -319,14 +319,14 @@ public class V2ThirdPartyConfigService {
         String foundProviderId = config.getProviderId();
 
         if (!config.getAllowedEvents().contains(eventType)) {
-            LOGGER.debug("V2 compatibility mode: Event type {} not allowed for provider {} (key: {})",
+            LOGGER.debug("single-tenant compatibility mode: Event type {} not allowed for provider {} (key: {})",
                     eventType, foundProviderId, SecurityUtils.maskSecret(providerKey));
             return false;
         }
 
         boolean ipAuthorized = isIpAllowed(config, sourceIP);
         if (!ipAuthorized) {
-            LOGGER.debug("V2 compatibility mode: IP {} not authorized for provider {} (key: {})",
+            LOGGER.debug("single-tenant compatibility mode: IP {} not authorized for provider {} (key: {})",
                     sourceIP, foundProviderId, SecurityUtils.maskSecret(providerKey));
         }
         return ipAuthorized;

@@ -64,10 +64,10 @@ public interface RestAuthenticationConfig extends AdminTenantConfig {
 
     /**
      * Check if single-tenant compatibility mode is enabled.
-     * When enabled, V2 clients can use Unomi V3 without requiring API keys:
-     * - Public endpoints (like /context.json) require no authentication (like V2)
-     * - Private endpoints require system administrator authentication (like V2)
-     * - A default tenant is automatically used for all operations
+     * When enabled, Unomi 2 and Unomi 3 clients can use Unomi 4.0 without requiring API keys:
+     * - Public endpoints (like /context.json) require no authentication (like Unomi 2 / 3)
+     * - Private endpoints require system administrator authentication (like Unomi 2 / 3)
+     * - Tenant {@code default} is used for all REST operations
      *
      * @return true if single-tenant compatibility mode is enabled, false otherwise
      */

@@ -574,6 +574,6 @@ A default test page is provided at the following URL:
 ----
 
 This test page loads `/cxs/context.js`, which retrieves or creates a user context.
-On Unomi 4.0, public context endpoints require a tenant public API key (`X-Unomi-Api-Key`) unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled.
+On Unomi 4.0, public context endpoints require a tenant public API key (`X-Unomi-Api-Key`) unless <<_v2_compatibility_mode,single-tenant compatibility mode>> is enabled.
 Create a tenant and regenerate keys first (see <<_five_minutes_quickstart,5-minute quickstart>> or <<_multitenancy,Multi-tenancy>>).
 The page also contains an experimental Facebook Login integration that does not yet save the context back to the server.

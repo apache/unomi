@@ -12,9 +12,9 @@
 // limitations under the License.
 //
 
-=== Apache Unomi V2/V3 API Differences Guide
+=== Apache Unomi 2 / 3 to 4.0 API differences
 
-This document explains the key differences between Apache Unomi 2.x and 3.x versions from an API perspective.
+This document explains the key API differences between Apache Unomi 2.x / 3.x and Unomi 4.0.
 
 ==== Overview
 
@@ -31,13 +31,13 @@ The key innovation in Unomi 4.0 is the introduction of **tenant isolation** for 
 
 This multi-tenancy support necessitates the authentication changes described below, as the system must now identify which tenant context to operate in for every request.
 
-==== Key Differences Between V2 and V3
+==== Key differences between Unomi 2 / 3 and Unomi 4
 
 ===== Authentication Model
 
 [cols="1,1,1", options="header"]
 |===
-|Aspect |Unomi V2 |Unomi 4.0
+|Aspect |Unomi 2 / 3 |Unomi 4.0
 
 |Authentication Method
 |System Administrator Authentication (`karaf` user)
@@ -56,9 +56,9 @@ This multi-tenancy support necessitates the authentication changes described bel
 |System Administrator Authentication (`karaf` user)
 |===
 
-===== API Key Types (V3 Only)
+===== API Key Types (4.0 only)
 
-V3 introduces two types of API keys per tenant:
+Unomi 4.0 introduces two types of API keys per tenant:
 
 - **Public Key**: Used for public endpoints (event collection via `/context.json`)
 - **Private Key**: Used with tenantId for tenant-specific administrative operations
@@ -67,7 +67,7 @@ V3 introduces two types of API keys per tenant:
 
 [cols="1,1,1", options="header"]
 |===
-|Endpoint Category |V2 Authentication |V3 Authentication
+|Endpoint Category |Unomi 2 / 3 Authentication |Unomi 4.0 Authentication
 
 |Event Collection (`/context.json`)
 |None
@@ -82,9 +82,9 @@ V3 introduces two types of API keys per tenant:
 |System Admin (`karaf` user)
 |===
 
-==== Authentication Flow (V3)
+==== Authentication Flow (4.0)
 
-The AuthenticationFilter in V3 follows this resolution order:
+The AuthenticationFilter in 4.0 follows this resolution order:
 
 1. **Tenant endpoints** (`/cxs/tenants`): Requires system administrator authentication only
 2. **Public endpoints** (e.g., `/context.json`): Requires public API key via `X-Unomi-Api-Key` header
@@ -94,7 +94,7 @@ The AuthenticationFilter in V3 follows this resolution order:
 
 ==== Code Examples
 
-===== V2 Authentication
+===== Unomi 2 / 3 Authentication
 
 [source,java]
 ----
@@ -110,7 +110,7 @@ RestAssured.given()
     .post("/context.json");
 ----
 
-===== V3 Authentication
+===== Unomi 4.0 Authentication
 
 [source,java]
 ----
@@ -151,12 +151,12 @@ given()
 ----
 public class UnomiConfiguration {
     public UnomiClient createClient(String baseUrl) {
-        String version = System.getProperty("unomi.version", "3");
+        String version = System.getProperty("unomi.version", "4.0");
         
-        if ("3".equals(version)) {
-            return new UnomiV3Client(baseUrl);
+        if ("4.0".equals(version)) {
+            return new UnomiV40Client(baseUrl);
         } else {
-            return new UnomiV2Client(baseUrl);
+            return new UnomiLegacyClient(baseUrl);
         }
     }
 }
@@ -166,14 +166,14 @@ public class UnomiConfiguration {
 
 [source,java]
 ----
-// V2 Client
+// Unomi 2 / 3 Client
 public void init() {
     RestAssured.baseURI = baseUrl;
     RestAssured.authentication = RestAssured.preemptive()
         .basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"));
 }
 
-// V3 Client
+// Unomi 4.0 Client
 public void init() {
     RestAssured.baseURI = baseUrl;
 }
@@ -186,7 +186,7 @@ public void updateKeys(String publicKey, String privateKey) {
 
 ==== Migration Guidelines
 
-===== From V2 to V3
+===== From Unomi 2 or 3 to Unomi 4
 
 1. **Understand Multi-Tenancy Impact**
    - All data (profiles, events, segments, rules, schemas) becomes tenant-specific
@@ -204,12 +204,12 @@ public void updateKeys(String publicKey, String privateKey) {
    - Keep system administrator authentication as fallback for administrative operations
    - Continue using system administrator authentication for tenant administration
 
-4. **No API Contract Changes**
-   - All endpoints remain the same
-   - Request/response payloads are unchanged
-   - Only authentication mechanism differs
+4. **API paths stay the same**
+   - Endpoint paths remain the same
+   - Most request/response payloads keep the same shape
+   - Authentication and tenant resolution differ; see the 3.0→4.0 migration guide for other breaking changes
 
-===== Benefits of Multi-Tenancy in V3
+===== Benefits of Multi-Tenancy in 4.0
 
 - **Data Isolation**: Complete separation ensures tenant data never crosses boundaries
 - **Scalability**: Support for multiple customers/organizations in a single Unomi instance
@@ -219,12 +219,12 @@ public void updateKeys(String publicKey, String privateKey) {
 
 ==== Conclusion
 
-The fundamental difference between Unomi V2 and V3 is the introduction of **comprehensive multi-tenancy support**:
+The fundamental difference between Unomi 2 / 3 and Unomi 4 is the introduction of **comprehensive multi-tenancy support**:
 
-- **V2**: Single-tenant architecture with system administrator authentication for all operations
-- **V3**: Multi-tenant architecture with complete data isolation and tenant-specific authentication
-- **API Endpoints**: Identical between versions - no breaking changes to existing integrations
-- **Data Model**: All entities (profiles, events, segments, rules, schemas) become tenant-specific in V3
+- **Unomi 2 / 3**: Single-tenant architecture with system administrator authentication for all operations
+- **Unomi 4**: Multi-tenant architecture with complete data isolation and tenant-specific authentication
+- **API Endpoints**: Paths stay the same; authentication and some behaviours change (see the migration guide)
+- **Data Model**: All entities (profiles, events, segments, rules, schemas) become tenant-specific in 4.0
 - **Authentication**: New tenant-based authentication model with system administrator authentication as fallback
 
-The authentication changes in V3 are driven by the need to establish tenant context for every operation, ensuring complete data isolation while maintaining backward compatibility for administrative operations. 
+The authentication changes in 4.0 are driven by the need to establish tenant context for every operation, ensuring complete data isolation while maintaining backward compatibility for administrative operations. 

@@ -135,7 +135,7 @@ ${sep}
             "itemType": "tenant",
             "name": "Default Tenant",
             "tenantId": "system",
-            "description": "Default tenant created during migration to Unomi V3",
+            "description": "Default tenant created during migration to Unomi 4.0",
             "createdBy": "system-migration-4.0.0",
             "lastModifiedBy": "system-migration-4.0.0",
             "creationDate": "${isoDate}",

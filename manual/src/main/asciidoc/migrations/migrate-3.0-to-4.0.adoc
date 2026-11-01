@@ -194,9 +194,9 @@ public void updateKeys(String publicKey, String privateKey) {
 }
 ----
 
-==== No API Contract Changes
+==== API paths stay the same; behaviour does not
 
-All API endpoints remain the same between 3.0 and 4.0, and request/response payloads are unchanged in shape. The differences are in the authentication mechanism, tenant resolution, and which of the identity fields a public caller sends to `/context.json` and `/eventcollector` the server acts on — see <<_client_facing_hardening_4_0,Client-facing hardening (4.0)>> below.
+API paths stay the same between 3.0 and 4.0, and most request/response payloads keep the same shape. Authentication, tenant resolution, and which identity fields a public caller may set on `/context.json` and `/eventcollector` do change — see <<_client_facing_hardening_4_0,Client-facing hardening (4.0)>> below. Other breaking changes are listed in <<_breaking_changes_3_0_to_4_0,Breaking changes>>.
 
 [#_client_facing_hardening_4_0]
 ==== Client-facing hardening (4.0)
@@ -530,6 +530,34 @@ console (port 8102) is not covered by that check.
 - **Compliance**: Easier to meet data privacy regulations with clear tenant boundaries
 - **Cost Efficiency**: Shared infrastructure with isolated data reduces operational costs
 
+[#_breaking_changes_3_0_to_4_0]
+=== Breaking changes
+
+The sections above cover authentication and client-facing hardening. The lists below gather other changes that can break an existing 3.0 installation, integration, or plugin. Related tickets: https://issues.apache.org/jira/browse/UNOMI-1008[UNOMI-1008] (admin default tenant), https://issues.apache.org/jira/browse/UNOMI-1005[UNOMI-1005] (public cookie origins), https://issues.apache.org/jira/browse/UNOMI-1007[UNOMI-1007] (health check), https://issues.apache.org/jira/browse/UNOMI-1001[UNOMI-1001] (third-party peers in compatibility mode), https://issues.apache.org/jira/browse/UNOMI-1012[UNOMI-1012] (compatibility mode for Unomi 2 and 3 clients).
+
+==== Operators
+
+* **Shell commands** such as `profile-list`, `rule-list`, and `segment-view` were removed. Use `unomi:crud` instead (for example `crud list profile`, `crud read rule RULE_ID`). See <<_shell_commands,Shell commands>>.
+* **Document ids** in the search index now start with the tenant id. Scripts or dashboards that read ids directly must be updated.
+* **GraphQL** is enabled through the GraphQL distributions (`unomi-distribution-elasticsearch-graphql` or `unomi-distribution-opensearch-graphql`) or the `cdp-graphql-feature` feature, not the older 3.0 wiring alone. See <<_graphql_api,GraphQL API>>.
+* **Health check** environment variables use the `UNOMI_HEALTHCHECK_*` names (`UNOMI_HEALTHCHECK_ENABLED`, `UNOMI_HEALTHCHECK_PROVIDERS`, `UNOMI_HEALTHCHECK_TIMEOUT`, and `UNOMI_HEALTHCHECK_PASSWORD`). See <<_configuration,Configuration>>.
+* **Third-party / peer servers**: `org.apache.unomi.thirdparty.*` and the `X-Unomi-Peer` header apply only in <<_v2_compatibility_mode,single-tenant compatibility mode>>. In normal multi-tenant mode, protected events use each tenant's `restrictedEventTypes` and `authorizedIPs` settings (see <<_secured_events_configuration,Secured events configuration>>).
+* **Migration key file**: `migrate-4.0.0-10-tenantInitialization` writes API keys under `{karaf.data}/migration/secrets/`. The public key goes in the `X-Unomi-Api-Key` header; the private key is used with HTTP Basic authentication as `tenantId:privateKey`. Store the file securely and delete it after the keys are saved elsewhere.
+
+==== Integrators / REST clients
+
+* Creating a profile without an `itemId` is refused.
+* Condition validation failures on REST return a generic `badRequest` response. Detailed messages stay in the server log. See <<_condition_validation,Condition validation>>.
+* Public endpoints need a tenant public API key unless <<_v2_compatibility_mode,single-tenant compatibility mode>> is on (for clients written for Unomi 2 or Unomi 3). See <<_updating_applications_consuming_unomi,Updating applications consuming Unomi>> and the client-facing hardening notes above.
+* Websites on another origin must be listed for the visitor cookie; see <<_public_tracker_origins,Websites on other origins>>.
+
+==== Plugin developers
+
+* The **task scheduler** is a new service surface (`SchedulerService` and related APIs). Plugins that scheduled work their own way should move to it when they need cluster-aware tasks. See <<_scheduler,Task scheduler>>.
+* Some **condition classes** moved to a dedicated advanced-conditions plugin and package. Redeploy plugins that relied on the old location.
+* Some **legacy query builders** were removed; the migration script `migrate-4.0.0-15-updateLegacyQueryBuilder` rewrites stored definitions. Revisit custom definitions that still assume the old builders.
+* Event, definitions, and profile **Java service** method signatures and condition parameter default-value behaviour may differ from 3.0. Rebuild plugins against the 4.0 API and run your tests.
+
 === Migration Checklist
 
 Before starting the migration, please ensure that:
@@ -538,9 +566,9 @@ Before starting the migration, please ensure that:
 - You did practice the migration in a staging environment, NEVER migrate a production environment without prior validation
 - You are currently running Apache Unomi 3.0 (or a later 3.0.x version)
 - You understand the multi-tenancy impact on your data model
-- You have a plan to update client applications to tenant API keys (or temporary <<_v2_compatibility_mode,single-tenant compatibility mode>> only if coming from 2.x)
-- You have reviewed the <<_client_facing_hardening_4_0,client-facing hardening>> notes (cookie-only public profile binding, HttpOnly default, required passwords, privileged REST roles)
-- You know how to obtain plaintext API keys after upgrade (regenerate via `/cxs/tenants/{id}/apikeys`; create responses expose masked keys only)
+- You have a plan to update client applications to tenant API keys (or temporary <<_v2_compatibility_mode,single-tenant compatibility mode>> for Unomi 2 or Unomi 3 clients)
+- You have reviewed the <<_breaking_changes_3_0_to_4_0,breaking changes>> and <<_client_facing_hardening_4_0,client-facing hardening>> notes
+- You know how to obtain plaintext API keys after upgrade (regenerate via `/cxs/tenants/{id}/apikeys`; create responses expose masked keys only; the migration also writes a key file under `data/migration/secrets/`)
 - Your recurrent import and export `file` endpoints resolve under `{baseDir}/{tenantId}`, or the router's base-directory properties point at the directories already in use (see above)
 
 === Migration Process
@@ -565,21 +593,21 @@ Scripts applied for the 4.0 line include (under `tools/shell-commands/.../META-I
 * `migrate-4.0.0-05-fixSystemItemIds`
 * `migrate-4.0.0-10-tenantInitialization` (creates the default tenant used for isolation)
 * `migrate-4.0.0-15-updateLegacyQueryBuilder`
-4. **Update client applications** to the 4.0 authentication model (public key header / tenant private key), or enable <<_v2_compatibility_mode,single-tenant compatibility mode>> only when migrating **from Unomi 2.x**.
+4. **Update client applications** to the 4.0 authentication model (public key header / tenant private key), or enable <<_v2_compatibility_mode,single-tenant compatibility mode>> while Unomi 2 or Unomi 3 clients are still in use.
 5. **Start your Apache Unomi 4.0 cluster**.
-6. **Regenerate and store tenant API keys** (plaintext is returned only from the key-creation endpoint), then **test** applications end to end.
+6. **Store tenant API keys** from the migration key file under `data/migration/secrets/` (or regenerate via `/cxs/tenants/{id}/apikeys`), then **test** applications end to end.
 
 === Transitional authentication options
 
-Unomi 4.0 does **not** provide a separate "3.0 compatibility mode" system property. Use one of the following approaches while migrating clients:
+Use one of the following approaches while migrating clients:
 
 ==== Option 1: Update clients to 4.0 authentication (recommended)
 
 Adopt tenant public API keys for public endpoints and tenant private keys or JAAS for administrative work. See <<_multitenancy,Multi-tenancy>> and the authentication examples in this guide. For the Unomi web tracker, set `apiKey`; see <<_web_tracker_server_versions,Configuring the tracker for your Unomi server>>.
 
-==== Option 2: single-tenant compatibility mode (2.x clients only)
+==== Option 2: single-tenant compatibility mode (Unomi 2 and Unomi 3 clients)
 
-If you are migrating from **Unomi 2.x** (not 3.0), you can enable <<_v2_compatibility_mode,single-tenant compatibility mode>> so legacy clients work without API keys during a phased rollout:
+If clients were written for **Unomi 2.x or Unomi 3.x**, you can enable <<_v2_compatibility_mode,single-tenant compatibility mode>> so they work without tenant API keys during a phased rollout:
 
 [source,properties]
 ----
@@ -588,11 +616,11 @@ singletenantcompatibility.enabled = true
 ----
 
 This mode always uses tenant `default`. There is no property to point it at another tenant: `defaultTenantId` does not
-apply to it yet, so leave that setting at `default` while the mode is on (GraphQL still follows it). If tenant `default` does not exist yet, the first public request creates it. Migrated 2.x data has to live in that tenant to be visible while the mode is on.
+apply to it yet, so leave that setting at `default` while the mode is on (GraphQL still follows it). If tenant `default` does not exist yet, the first public request creates it. Migrated data has to live in that tenant to be visible while the mode is on.
 
 Environment variable equivalent: `UNOMI_REST_AUTHENTICATION_SINGLETENANTCOMPATIBILITYMODEENABLED=true`
 
-WARNING: single-tenant compatibility mode is intended for migration from 2.x only. It bypasses tenant API key requirements on public endpoints. Disable it once all clients use 4.0 authentication.
+WARNING: single-tenant compatibility mode is a temporary bridge for Unomi 2 and Unomi 3 clients. It bypasses tenant API key requirements on public endpoints. Disable it once all clients use 4.0 authentication.
 
 === Post Migration
 
