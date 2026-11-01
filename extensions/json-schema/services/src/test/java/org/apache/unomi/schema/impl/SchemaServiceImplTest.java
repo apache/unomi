@@ -120,6 +120,35 @@ public class SchemaServiceImplTest {
     }
 
     @Test
+    public void testBundleResaveKeepsMigratedCreatedBy() {
+        // UNOMI-1026: a bundle re-save after migration must not wipe create audit.
+        final String schemaId = "https://unomi.apache.org/schemas/json/events/test";
+        final Date migratedAt = new Date(1_700_000_000_000L);
+
+        contextManager.executeAsSystem(() -> {
+            JsonSchemaWrapper existing = persistenceService.load(schemaId, JsonSchemaWrapper.class);
+            assertNotNull("Predefined schema should already be persisted", existing);
+            existing.setCreatedBy("system-migration-4.0.0");
+            existing.setCreationDate(migratedAt);
+            persistenceService.save(existing);
+
+            JsonSchemaWrapper fromBundle = new JsonSchemaWrapper(
+                    schemaId, existing.getSchema(), existing.getTarget(), existing.getName(),
+                    existing.getExtendsSchemaId(), new Date());
+            fromBundle.setTenantId(SYSTEM_TENANT);
+            // Bundle JSON has no creator — same as a fresh predefined reload.
+            assertNull(fromBundle.getCreatedBy());
+
+            schemaService.saveBundleSchema(fromBundle);
+
+            JsonSchemaWrapper reloaded = persistenceService.load(schemaId, JsonSchemaWrapper.class);
+            assertEquals("system-migration-4.0.0", reloaded.getCreatedBy());
+            assertEquals(migratedAt, reloaded.getCreationDate());
+            return null;
+        });
+    }
+
+    @Test
     public void testPredefinedSchemas() {
         // The schema listener in setup should have already loaded the predefined schemas
         schemaService.refreshJSONSchemas();
