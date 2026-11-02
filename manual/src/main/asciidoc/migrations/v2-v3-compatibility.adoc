@@ -194,8 +194,8 @@ public void updateKeys(String publicKey, String privateKey) {
    - Tenant context must be established for every API operation
 
 2. **Update Authentication Configuration**
-   - Remove global system administrator authentication
    - Configure tenant-specific public and private API keys
+   - Or, while clients are being updated, enable <<_v2_compatibility_mode,single-tenant compatibility mode>>
    - Implement endpoint-specific authentication logic
 
 3. **Endpoint-Specific Changes**

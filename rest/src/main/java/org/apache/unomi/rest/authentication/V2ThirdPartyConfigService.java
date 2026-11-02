@@ -58,7 +58,7 @@ public class V2ThirdPartyConfigService {
     private static final String PROP_TRUSTED_PROXIES = "trustedProxies";
 
     /**
-     * OSGi configuration for V2 third-party providers.
+     * OSGi configuration for third-party providers (single-tenant compatibility mode).
      */
     @ObjectClassDefinition(
         name = "Apache Unomi Third-Party Configuration",
@@ -232,7 +232,7 @@ public class V2ThirdPartyConfigService {
         int totalEvents = newProviders.values().stream()
                 .mapToInt(config -> config.getAllowedEvents().size())
                 .sum();
-        LOGGER.info("V2 Third-Party Configuration updated - {} providers with {} total protected events"
+        LOGGER.info("Third-party configuration updated - {} providers with {} total protected events"
                         + " (allowExampleKey={}, trustedProxies={})",
                 newProviders.size(), totalEvents, allowExample, proxies.size());
     }

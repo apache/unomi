@@ -38,7 +38,7 @@ When single-tenant compatibility mode is enabled:
   about 30 seconds, so public requests do not wait on each other or re-read it from the database
   every time. A change made on another node is picked up after about that time.
 - **No authentication** is required for non-protected events (like Unomi 2 and Unomi 3)
-- **The visitor cookie is limited to listed websites** (unlike Unomi 2.x, and unlike Unomi 3.x when origins were not listed).
+- **The visitor cookie is limited to listed websites** (unlike Unomi 2.x and 3.x, which let pages on any origin use it).
   A website on another origin, another subdomain included, must be listed in `UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS` or in the
   `default` tenant's `publicCorsAllowedOrigins` property, for its requests to use and receive the cookie, whether it calls
   `context.json` or embeds `context.js` with a `<script>` tag. A plain `<script>` tag (without a `crossorigin` attribute)
@@ -49,15 +49,10 @@ When single-tenant compatibility mode is enabled:
 This allows Unomi 2 and Unomi 3 clients to work with Unomi 4.0 immediately after migration, giving you time to update
 applications to tenant API keys.
 
-==== Unomi 2 vs Unomi 3 clients in this mode
-
-Both lines of clients can run without API keys. Where they differ:
-
-* **Third-party / peer servers** written for Unomi 3 keep using `X-Unomi-Peer` and `etc/org.apache.unomi.thirdparty.cfg`
-  while the mode is on. That path is not used in normal multi-tenant mode (tenant `restrictedEventTypes` /
-  `authorizedIPs` apply instead). See <<_secured_events_configuration,Secured events configuration>> and UNOMI-1001.
-* **Visitor cookie origins** still follow the 4.0 listing rules above. Unomi 2 clients that relied on an open cookie
-  across subdomains must list those websites; Unomi 3 clients that already listed origins keep that requirement.
+Unomi 2 and Unomi 3 clients behave the same way in this mode. Third-party / peer servers keep using `X-Unomi-Peer` and
+`etc/org.apache.unomi.thirdparty.cfg` while the mode is on; that path is not used in normal multi-tenant mode, where the
+tenant's `authorizedIPs` apply instead. See <<_secured_events_configuration,Secured events configuration>> and
+https://issues.apache.org/jira/browse/UNOMI-1001[UNOMI-1001].
 
 ==== Prerequisites
 
@@ -361,39 +356,9 @@ Once all clients are migrated to 4.0 authentication:
 
 ==== Testing single-tenant compatibility mode
 
-The existing test framework supports testing single-tenant compatibility mode using system properties.
-
-===== Running Tests in Compatibility Mode
-
-To run tests with single-tenant compatibility mode enabled:
-
-```bash
-# Enable single-tenant compatibility mode for tests
-mvn test -Dunomi.v2.compatibility.mode=true
-
-# Or set the property in your test environment
-export UNOMI_V2_COMPATIBILITY_MODE=true
-mvn test
-```
-
-===== Test Framework Integration
-
-The test framework automatically detects single-tenant compatibility mode and uses the appropriate client:
-
-- **Compatibility mode enabled**: Uses a legacy-style client for public calls without API keys
-- **Compatibility mode disabled**: Uses normal 4.0 authentication
-
-This allows you to test both single-tenant compatibility mode and normal 4.0 mode using the same test suite.
-
-===== Example Test Execution
-
-```bash
-# Test with single-tenant compatibility mode
-mvn test -Dunomi.v2.compatibility.mode=true -Dunomi.url=http://localhost:8181
-
-# Test with normal 4.0 mode
-mvn test -Dunomi.url=http://localhost:8181
-```
+The integration test `SingleTenantCompatibilityModeIT` (in `itests`) covers this mode. It turns the mode on and off at
+runtime through the `singletenantcompatibility.enabled` setting of `org.apache.unomi.rest.authentication`, so it runs
+as part of the normal integration test suite; no extra system property is needed.
 
 ==== Conclusion
 
@@ -403,6 +368,6 @@ The single-tenant compatibility mode provides a smooth migration path from Unomi
 - **Gradually migrate** to 4.0 authentication
 - **Leverage Unomi 4 features** while maintaining backward compatibility
 - **Minimize downtime** during the migration process
-- **Test both modes** using the existing test framework
+- **Test both modes** with the integration test suite
 
 Use this mode as a temporary solution during your migration journey, and plan to disable it once all clients are updated to use 4.0 authentication.

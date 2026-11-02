@@ -392,8 +392,8 @@ public class AuthenticationFilter implements ContainerRequestFilter {
      * (notably {@code karaf.bat}), so an empty credential is never accepted over REST either.
      * <p>
      * Deliberately called at each point where a Basic credential is actually consumed rather than
-     * once at the top of {@link #filter}: anonymous traffic on public paths — and every path in V2
-     * compatibility mode — ignores {@code Authorization} entirely, so rejecting up front would turn
+     * once at the top of {@link #filter}: anonymous traffic on public paths — in normal and in
+     * single-tenant compatibility mode — ignores {@code Authorization} entirely, so rejecting up front would turn
      * a stray or stale Basic header (a cached browser credential, an injecting proxy) into a 401 on
      * a request that is supposed to succeed without authentication.
      *

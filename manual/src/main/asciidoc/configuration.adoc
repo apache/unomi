@@ -180,15 +180,15 @@ depends on whether <<_v2_compatibility_mode,single-tenant compatibility mode>> i
 
 ==== Normal multi-tenant mode
 
-In normal 4.0 mode, protected events are controlled with two fields on the tenant object (REST `/cxs/tenants` or
-`crud update tenant`):
+In normal 4.0 mode, protected events are controlled with two fields on the tenant object, set through REST
+`/cxs/tenants` or `crud update tenant` (where `restrictedEventTypes` is named `restrictedEventPermissions`):
 
 * `restrictedEventTypes` — extra event type ids that need an authorized source IP (for example `login`)
 * `authorizedIPs` — IP addresses or CIDR ranges allowed to send protected events
 
 Some event types are always protected, whatever the tenant lists: `sessionCreated`, `sessionReassigned`,
 `profileUpdated`, `ruleFired` and `updateProperties`. Unomi checks the caller IP of a protected event against
-`authorizedIPs`. See <<_multitenancy,Multi-tenancy>> for which callers are checked and for tenant updates.
+`authorizedIPs`. See <<_multitenancy,Multi-tenancy>> for tenant updates.
 
 The global third-party provider files below are **not** used in this mode.
 

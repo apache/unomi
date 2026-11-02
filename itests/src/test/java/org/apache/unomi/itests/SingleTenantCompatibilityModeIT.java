@@ -55,7 +55,7 @@ import static org.junit.Assert.*;
 
 /**
  * Integration tests for single-tenant compatibility mode authentication.
- * Tests the behavior when switching between V2 and V3 authentication modes
+ * Tests the behavior when switching between single-tenant compatibility mode and normal multi-tenant mode
  * using OSGi configuration admin without restarting bundles.
  */
 @RunWith(PaxExam.class)
@@ -97,12 +97,12 @@ public class SingleTenantCompatibilityModeIT extends BaseIT {
         keepTrying("Scope "+ TEST_SCOPE +" not found in the required time", () -> scopeService.getScope(TEST_SCOPE),
                 Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        // Store original V2 mode setting and default tenant ID
+        // Store original compatibility mode setting and default tenant ID
         originalV2Mode = restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled();
 
         // Configure single-tenant compatibility mode to use the BaseIT test tenant as default
         Map<String, Object> v2Config = new HashMap<>();
-        v2Config.put("singletenantcompatibility.enabled", false); // Start in V3 mode
+        v2Config.put("singletenantcompatibility.enabled", false); // Start in normal multi-tenant mode
 
         updateConfiguration(null,
                 "org.apache.unomi.rest.authentication",
