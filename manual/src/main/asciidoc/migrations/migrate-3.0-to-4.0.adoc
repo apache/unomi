@@ -540,8 +540,8 @@ The sections above cover authentication and client-facing hardening. The lists b
 * **Shell commands** such as `profile-list`, `rule-list`, and `segment-view` were removed. Use `unomi:crud` instead (for example `crud list profile`, `crud read rule RULE_ID`). See <<_shell_commands,Shell commands>>.
 * **Document ids** in the search index now start with the tenant id. Scripts or dashboards that read ids directly must be updated.
 * **GraphQL** is enabled through the GraphQL distributions (`unomi-distribution-elasticsearch-graphql` or `unomi-distribution-opensearch-graphql`) or the `cdp-graphql-feature` feature, not the older 3.0 wiring alone. See <<_graphql_api,GraphQL API>>.
-* **Health check** environment variables use the `UNOMI_HEALTHCHECK_*` names (`UNOMI_HEALTHCHECK_ENABLED`, `UNOMI_HEALTHCHECK_PROVIDERS`, `UNOMI_HEALTHCHECK_TIMEOUT`, and `UNOMI_HEALTHCHECK_PASSWORD`). See <<_configuration,Configuration>>.
-* **Third-party / peer servers**: `org.apache.unomi.thirdparty.*` and the `X-Unomi-Peer` header apply only in <<_v2_compatibility_mode,single-tenant compatibility mode>>. In normal multi-tenant mode, protected events use each tenant's `restrictedEventTypes` and `authorizedIPs` settings (see <<_secured_events_configuration,Secured events configuration>>).
+* **Health check password**: `UNOMI_HEALTHCHECK_PASSWORD` no longer defaults to `health` and must be set before start (like `UNOMI_ROOT_PASSWORD`). The other `UNOMI_HEALTHCHECK_*` variables keep their 3.0 names and defaults. See <<_configuration,Configuration>>.
+* **Third-party / peer servers**: `org.apache.unomi.thirdparty.*` and the `X-Unomi-Peer` header apply only in <<_v2_compatibility_mode,single-tenant compatibility mode>>. In normal multi-tenant mode, protected events are checked against each tenant's `authorizedIPs` (plus any extra types in `restrictedEventTypes`); see <<_secured_events_configuration,Secured events configuration>>.
 * **Migration key file**: `migrate-4.0.0-10-tenantInitialization` writes API keys under `{karaf.data}/migration/secrets/`. The public key goes in the `X-Unomi-Api-Key` header; the private key is used with HTTP Basic authentication as `tenantId:privateKey`. Store the file securely and delete it after the keys are saved elsewhere.
 
 ==== Integrators / REST clients
@@ -554,8 +554,8 @@ The sections above cover authentication and client-facing hardening. The lists b
 ==== Plugin developers
 
 * The **task scheduler** is a new service surface (`SchedulerService` and related APIs). Plugins that scheduled work their own way should move to it when they need cluster-aware tasks. See <<_scheduler,Task scheduler>>.
-* Some **condition classes** moved to a dedicated advanced-conditions plugin and package. Redeploy plugins that relied on the old location.
-* Some **legacy query builders** were removed; the migration script `migrate-4.0.0-15-updateLegacyQueryBuilder` rewrites stored definitions. Revisit custom definitions that still assume the old builders.
+* The `pastEventCondition` and `sourceEventPropertyCondition` evaluators moved from the base plugin to the advanced-conditions plugin (package `org.apache.unomi.plugins.advancedconditions.conditions`). Condition type ids are unchanged, so JSON definitions keep working; only Java code that references the evaluator classes must be updated.
+* **Query builder ids** were renamed. Legacy `*ESQueryBuilder` ids in condition definitions are still mapped to the new ids at run time, with a warning in the log, and `migrate-4.0.0-15-updateLegacyQueryBuilder` rewrites the stored ones. Update plugin definitions to the new ids to remove the warning.
 * Event, definitions, and profile **Java service** method signatures and condition parameter default-value behaviour may differ from 3.0. Rebuild plugins against the 4.0 API and run your tests.
 
 === Migration Checklist

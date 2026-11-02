@@ -135,7 +135,7 @@ defining the corresponding JSON schema and you're ready to update profiles using
 
 - Use the protected built-in "updateProperties" event. This event is designed to be used for administrative purposes
 only. Being a protected event type, it is only accepted from an authorized source address — the tenant's
-`authorizedIPs` when the type is in `restrictedEventTypes`, or in <<_v2_compatibility_mode,single-tenant compatibility mode>>
+`authorizedIPs` (it is always protected, whatever the tenant's `restrictedEventTypes`), or in <<_v2_compatibility_mode,single-tenant compatibility mode>>
 an `X-Unomi-Peer` key valid for that source address. Note that this is an
 address-based gate: it is independent of the public-versus-trusted caller distinction that governs profile and session
 binding (see <<_client_facing_hardening_4_0,client-facing hardening>>), and once the event is accepted a public-key

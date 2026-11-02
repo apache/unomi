@@ -242,8 +242,8 @@ image::form-event-type.png[]
 
 This event is usually used by user interfaces that make it possible to modify profile properties, for example a form where a user can edit his profile properties, or a management UI to modify.
 
-Note that this event type is a protected event type that is only accepted from authorized source IP addresses (tenant
-`restrictedEventTypes` / `authorizedIPs` in normal mode; in <<_v2_compatibility_mode,single-tenant compatibility mode>>
+Note that this event type is a protected event type that is only accepted from authorized source IP addresses (the tenant's
+`authorizedIPs` in normal mode, see <<_secured_events_configuration,Secured events configuration>>; in <<_v2_compatibility_mode,single-tenant compatibility mode>>
 also an `X-Unomi-Peer` key valid for that address). That
 gate is separate from the public-versus-trusted caller distinction that governs which profile and session a request may
 bind to — see <<_client_facing_hardening_4_0,client-facing hardening>>. Once the event is accepted, the property
