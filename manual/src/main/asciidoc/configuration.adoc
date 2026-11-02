@@ -1594,7 +1594,7 @@ shell commands in the "Shell commands" section of the documentation.
 
 === Search engine authentication and security
 
-Apache Unomi 3.x talks to **Elasticsearch 9** or **OpenSearch 3** using the settings below. Prefer `etc/custom.system.properties` (or `unomi.custom.system.properties` / environment variables). The persistence OSGi configs (`etc/org.apache.unomi.persistence.elasticsearch.cfg` / `...opensearch.cfg`) expose the same values as short keys (`username`, `password`, `sslEnable`, `sslTrustAllCertificates`) that resolve from those system properties.
+Apache Unomi 4.x talks to **Elasticsearch 9** or **OpenSearch 3** using the settings below. Prefer `etc/custom.system.properties` (or `unomi.custom.system.properties` / environment variables). The persistence OSGi configs (`etc/org.apache.unomi.persistence.elasticsearch.cfg` / `...opensearch.cfg`) expose the same values as short keys (`username`, `password`, `sslEnable`, `sslTrustAllCertificates`) that resolve from those system properties.
 
 Elasticsearch security reference: https://www.elastic.co/guide/en/elasticsearch/reference/current/security-minimal-setup.html[Elasticsearch security].
 OpenSearch security reference: https://docs.opensearch.org/docs/latest/security/[OpenSearch Security].
