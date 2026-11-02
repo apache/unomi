@@ -16,6 +16,11 @@
  */
 package org.apache.unomi.rest.service.impl;
 
+import org.apache.cxf.interceptor.security.RolePrefixSecurityContextImpl;
+import org.apache.cxf.message.Message;
+import org.apache.cxf.message.MessageImpl;
+import org.apache.cxf.phase.PhaseInterceptorChain;
+import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Persona;
 import org.apache.unomi.api.PersonaSession;
 import org.apache.unomi.api.PersonaWithSessions;
@@ -24,6 +29,7 @@ import org.apache.unomi.api.Session;
 import org.apache.unomi.api.security.CompatPeerPrincipal;
 import org.apache.unomi.api.security.InsecureTransportPrincipal;
 import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.security.TenantPrincipal;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
@@ -1026,6 +1032,49 @@ class RestServiceUtilsImplProfileBindingTest {
         Profile anonymousProfile = new Profile();
         anonymousProfile.getSystemProperties().put("isAnonymousProfile", true);
         return anonymousProfile;
+    }
+
+    @Test
+    void performEventsRequest_trustedCallerSkipsRestrictedEventCheck() throws Exception {
+        when(securityService.hasSystemAccess()).thenReturn(true);
+
+        EventsRequestContext ctx = performUpdatePropertiesEvent();
+
+        verify(eventService, never()).isEventAllowedForTenant(any(), any(), any());
+        verify(eventService).send(any(Event.class));
+        assertEquals(1, ctx.getProcessedItems());
+    }
+
+    @Test
+    void performEventsRequest_publicCallerRefusedByRestrictedEventCheck() throws Exception {
+        when(request.getRemoteAddr()).thenReturn("203.0.113.7");
+        when(eventService.isEventAllowedForTenant(any(Event.class), eq("tenant-1"), eq("203.0.113.7"))).thenReturn(false);
+
+        EventsRequestContext ctx = performUpdatePropertiesEvent();
+
+        verify(eventService, never()).send(any(Event.class));
+        assertEquals(0, ctx.getProcessedItems());
+    }
+
+    /** Sends one updateProperties event as a caller of tenant {@code tenant-1}. */
+    private EventsRequestContext performUpdatePropertiesEvent() throws Exception {
+        Subject subject = new Subject();
+        subject.getPrincipals().add(new TenantPrincipal("tenant-1"));
+        Message message = new MessageImpl();
+        message.put(org.apache.cxf.security.SecurityContext.class, new RolePrefixSecurityContextImpl(subject, "ROLE_"));
+        Field currentMessage = PhaseInterceptorChain.class.getDeclaredField("CURRENT_MESSAGE");
+        currentMessage.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        ThreadLocal<Message> threadMessage = (ThreadLocal<Message>) currentMessage.get(null);
+        threadMessage.set(message);
+        try {
+            EventsRequestContext ctx = new EventsRequestContext(new Date(), new Profile("profile-1"), null, request, response);
+            Event event = new Event();
+            event.setEventType("updateProperties");
+            return restServiceUtils.performEventsRequest(Collections.singletonList(event), ctx, mock(SecurityContext.class));
+        } finally {
+            threadMessage.remove();
+        }
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

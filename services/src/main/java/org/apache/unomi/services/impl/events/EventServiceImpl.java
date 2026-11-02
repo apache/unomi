@@ -112,6 +112,9 @@ public class EventServiceImpl implements EventService {
 
     private TracerService tracerService;
 
+    /** Tenants already warned that they authorize no IP, so the warning is logged once per tenant. */
+    private final Set<String> tenantsWarnedWithoutAuthorizedIPs = ConcurrentHashMap.newKeySet();
+
     public void setPredefinedEventTypeIds(Set<String> predefinedEventTypeIds) {
         this.predefinedEventTypeIds = predefinedEventTypeIds;
     }
@@ -166,7 +169,7 @@ public class EventServiceImpl implements EventService {
             // If tenant has defined restrictions, check if this event type is restricted
             if (tenantRestrictions.contains(event.getEventType())) {
                 // Event is restricted by tenant, proceed to IP check
-                return checkIPAuthorization(tenant, sourceIP);
+                return checkIPAuthorization(tenant, event.getEventType(), sourceIP);
             }
         }
 
@@ -174,18 +177,23 @@ public class EventServiceImpl implements EventService {
         // check global restrictions
         if (restrictedEventTypeIds.contains(event.getEventType())) {
             // Event is restricted globally, proceed to IP check
-            return checkIPAuthorization(tenant, sourceIP);
+            return checkIPAuthorization(tenant, event.getEventType(), sourceIP);
         }
 
         // Event is not restricted by either tenant or global settings
         return true;
     }
 
-    private boolean checkIPAuthorization(Tenant tenant, String sourceIP) {
+    private boolean checkIPAuthorization(Tenant tenant, String eventType, String sourceIP) {
         Set<String> authorizedIPs = tenant.getAuthorizedIPs();
         // Fail closed like the 3.0 third-party check: a tenant that authorized no IP accepts
         // protected events from nobody. IPValidationUtils treats an empty set as "no restriction".
         if (authorizedIPs == null || authorizedIPs.isEmpty()) {
+            if (tenantsWarnedWithoutAuthorizedIPs.add(tenant.getItemId())) {
+                LOGGER.warn("Refused restricted event type {} for tenant {}: the tenant has no authorizedIPs, so it accepts "
+                        + "restricted event types from no public caller. Set authorizedIPs on the tenant to allow them. "
+                        + "Logged once per tenant.", eventType, tenant.getItemId());
+            }
             return false;
         }
         return IPValidationUtils.isIpAuthorized(sourceIP, authorizedIPs);

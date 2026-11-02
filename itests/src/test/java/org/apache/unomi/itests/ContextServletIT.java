@@ -70,7 +70,9 @@ import static org.junit.Assert.*;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class ContextServletIT extends BaseIT {
+
     private final static Logger LOGGER = LoggerFactory.getLogger(ContextServletIT.class);
+    private static final Set<String> LOOPBACK_IPS = new HashSet<>(Arrays.asList("127.0.0.1", "::1"));
 
     private final static String CONTEXT_URL = "/cxs/context.json";
 
@@ -474,19 +476,29 @@ public class ContextServletIT extends BaseIT {
         props.put("update", toUpdate);
         updateEvent.setProperties(props);
 
-        ContextRequest probe = new ContextRequest();
-        probe.setSessionId(sessionId);
-        probe.setEvents(Collections.singletonList(updateEvent));
-        HttpPost probeRequest = new HttpPost(getFullUrl(CONTEXT_URL));
-        addPublicTenantAuth(probeRequest);
-        probeRequest.addHeader("Cookie", established.getCookieHeaderValue());
-        probeRequest.setEntity(new StringEntity(getObjectMapper().writeValueAsString(probe), ContentType.APPLICATION_JSON));
-        executeContextJSONRequest(probeRequest, sessionId);
+        // Authorize the caller's IP, so the probe passes the protected-event IP check and reaches
+        // the profile ownership check this test is about.
+        setTestTenantAuthorizedIPs(LOOPBACK_IPS);
+        try {
+            waitForOwnProfileUpdateAccepted(sessionId, established.getCookieHeaderValue(),
+                    established.getContextResponse().getProfileId(), "OWN");
 
-        shouldBeTrueUntilEnd("Other profile must not be updated by public updateProperties",
-                () -> profileService.load(otherId),
-                p -> p.getProperty("firstName") == null,
-                DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
+            ContextRequest probe = new ContextRequest();
+            probe.setSessionId(sessionId);
+            probe.setEvents(Collections.singletonList(updateEvent));
+            HttpPost probeRequest = new HttpPost(getFullUrl(CONTEXT_URL));
+            addPublicTenantAuth(probeRequest);
+            probeRequest.addHeader("Cookie", established.getCookieHeaderValue());
+            probeRequest.setEntity(new StringEntity(getObjectMapper().writeValueAsString(probe), ContentType.APPLICATION_JSON));
+            executeContextJSONRequest(probeRequest, sessionId);
+
+            shouldBeTrueUntilEnd("Other profile must not be updated by public updateProperties",
+                    () -> profileService.load(otherId),
+                    p -> p.getProperty("firstName") == null,
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
+        } finally {
+            setTestTenantAuthorizedIPs(Collections.emptySet());
+        }
     }
 
     @Test
@@ -510,24 +522,35 @@ public class ContextServletIT extends BaseIT {
                 p -> p.getProperty("firstName") == null,
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
 
-        Tenant settings = tenantService.getTenant(testTenant.getItemId());
-        settings.setAuthorizedIPs(new HashSet<>(Arrays.asList("127.0.0.1", "::1")));
-        tenantService.updateTenantSettings(settings);
+        setTestTenantAuthorizedIPs(LOOPBACK_IPS);
         try {
-            keepTrying("Protected event must be accepted from an authorized IP", () -> {
-                try {
-                    sendOwnProfileUpdate(sessionId, established.getCookieHeaderValue(), profileId, "ACCEPTED");
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-                return profileService.load(profileId);
-            }, p -> "ACCEPTED".equals(p.getProperty("firstName")), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+            waitForOwnProfileUpdateAccepted(sessionId, established.getCookieHeaderValue(), profileId, "ACCEPTED");
         } finally {
-            // The tenant is shared by the whole suite (PerSuite): put the default back.
-            Tenant restore = tenantService.getTenant(testTenant.getItemId());
-            restore.setAuthorizedIPs(new HashSet<>());
-            tenantService.updateTenantSettings(restore);
+            setTestTenantAuthorizedIPs(Collections.emptySet());
         }
+    }
+
+    /**
+     * Sets the authorized IPs of the test tenant. The tenant is shared by the whole suite (PerSuite),
+     * so a test that sets them must put the default (empty) back in a {@code finally}.
+     */
+    private void setTestTenantAuthorizedIPs(Set<String> authorizedIPs) {
+        Tenant settings = tenantService.getTenant(testTenant.getItemId());
+        settings.setAuthorizedIPs(new HashSet<>(authorizedIPs));
+        tenantService.updateTenantSettings(settings);
+    }
+
+    /** Re-sends an update of the caller's own profile until it is applied, i.e. until the tenant's authorized IPs are in effect. */
+    private void waitForOwnProfileUpdateAccepted(String sessionId, String cookie, String profileId, String firstName)
+            throws InterruptedException {
+        keepTrying("Protected event must be accepted from an authorized IP", () -> {
+            try {
+                sendOwnProfileUpdate(sessionId, cookie, profileId, firstName);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            return profileService.load(profileId);
+        }, p -> firstName.equals(p.getProperty("firstName")), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     private void sendOwnProfileUpdate(String sessionId, String cookie, String profileId, String firstName) throws Exception {

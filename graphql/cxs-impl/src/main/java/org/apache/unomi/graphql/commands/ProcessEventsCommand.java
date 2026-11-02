@@ -182,7 +182,8 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
     }
 
     /**
-     * Same restricted-event-type check as REST {@code EventService#send} callers. A tenant or system
+     * Same restricted-event-type check as the REST event endpoints
+     * ({@link EventService#isEventAllowedForTenant}). A tenant or system
      * administrator can already change any profile through the private API, so it is not gated.
      * GraphQL does not thread a client IP through this command, so for any other caller (public API
      * key) the source IP is {@code null}: a restricted type is always refused, and unrestricted types

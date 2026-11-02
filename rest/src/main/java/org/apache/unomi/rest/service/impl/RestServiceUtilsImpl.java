@@ -467,7 +467,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                     Event eventToSend = new Event(event.getEventType(), eventsRequestContext.getSession(), eventsRequestContext.getProfile(), event.getScope(),
                             event.getSource(), event.getTarget(), event.getProperties(), eventsRequestContext.getTimestamp(), event.isPersistent());
                     eventToSend.setFlattenedProperties(event.getFlattenedProperties());
-                    // Check if single-tenant compatibility mode is enabled and handle V2-style event authorization
+                    // Check if single-tenant compatibility mode is enabled and handle Unomi 2 / 3 style event authorization
                     if (restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled()) {
                         if (!isEventAllowedInV2CompatibilityMode(event, eventsRequestContext.getRequest())) {
                             LOGGER.debug("Event {} not authorized in single-tenant compatibility mode from IP {}", event.getEventType(), eventsRequestContext.getRequest().getRemoteAddr());
@@ -476,7 +476,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                             continue;
                         }
                     } else {
-                        // Normal V3 event authorization. A tenant or system administrator can already
+                        // Normal multi-tenant event authorization. A tenant or system administrator can already
                         // change any profile through the private endpoints, so the IP gate on
                         // protected events only applies to public callers.
                         if (!securityService.hasSystemAccess()
