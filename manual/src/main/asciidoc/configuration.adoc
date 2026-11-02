@@ -381,16 +381,16 @@ Using Karaf shell (requires admin access to Karaf console). See <<_shell_command
 [source,bash]
 ----
 # Create a tenant (JSON properties)
-unomi:crud create tenant -d '{"itemId":"mytenant","name":"My Company","description":"My Company tenant"}'
+unomi:crud create tenant '{"itemId":"mytenant","name":"My Company","description":"My Company tenant"}'
 
 # List tenants
 unomi:crud list tenant
 
 # View tenant details
-unomi:crud read tenant -i mytenant
+unomi:crud read tenant mytenant
 
 # Delete a tenant
-unomi:crud delete tenant -i mytenant
+unomi:crud delete tenant mytenant
 ----
 
 ==== API Keys and Authentication
@@ -403,7 +403,7 @@ The API keys are generated when creating a tenant, but the tenant resource only 
 [source,bash]
 ----
 # Using Karaf shell (requires admin access) — metadata only
-unomi:crud read tenant -i mytenant
+unomi:crud read tenant mytenant
 
 # Obtain plaintext (store immediately; it is not persisted)
 curl -X POST "http://localhost:8181/cxs/tenants/mytenant/apikeys?type=PUBLIC" \
@@ -442,7 +442,7 @@ curl -X POST "http://localhost:8181/cxs/tenants/mytenant/apikeys?type=PUBLIC&val
 }
 
 # Using Karaf shell (requires admin access)
-unomi:crud create apikey -d '{"tenantId":"mytenant","keyType":"PUBLIC","validityPeriod":30}'
+unomi:crud create apikey '{"tenantId":"mytenant","keyType":"PUBLIC","validityPeriod":30}'
 ----
 
 ==== Accessing API Endpoints

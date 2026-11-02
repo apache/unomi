@@ -201,7 +201,7 @@ API paths stay the same between 3.0 and 4.0, and most request/response payloads 
 [#_client_facing_hardening_4_0]
 ==== Client-facing hardening (4.0)
 
-`/cxs/context.json` and `/cxs/eventcollector` are reachable without authentication, or with a tenant *public* API key. In 4.0 the identity fields those endpoints accept are treated as claims to be checked rather than as instructions.
+`/cxs/context.json` and `/cxs/eventcollector` need a tenant *public* API key (or a tenant private key or administrator credentials); without one Unomi answers `401`, unless <<_v2_compatibility_mode,single-tenant compatibility mode>> is enabled. In 4.0 the identity fields those endpoints accept are treated as claims to be checked rather than as instructions.
 
 A caller is **trusted** when it holds a tenant private key or authenticates as a system administrator (`ROLE_UNOMI_ADMIN` or `ROLE_UNOMI_TENANT_ADMIN`). A tenant *public* API key is **not** trusted: it identifies the tenant, not the visitor.
 

@@ -13,10 +13,9 @@
 //
 
 [#_v2_compatibility_mode]
-[#_single_tenant_compatibility_mode]
 === single-tenant compatibility mode
 
-This document explains how to use single-tenant compatibility mode in Apache Unomi 4.0. The mode lets client applications
+[[_single_tenant_compatibility_mode]]This document explains how to use single-tenant compatibility mode in Apache Unomi 4.0. The mode lets client applications
 written for Unomi 2.x or Unomi 3.x keep working without tenant API keys while you move them to the 4.0 authentication model.
 
 ==== Overview
@@ -38,7 +37,8 @@ When single-tenant compatibility mode is enabled:
   about 30 seconds, so public requests do not wait on each other or re-read it from the database
   every time. A change made on another node is picked up after about that time.
 - **No authentication** is required for non-protected events (like Unomi 2 and Unomi 3)
-- **The visitor cookie is limited to listed websites** (unlike Unomi 2.x and 3.x, which let pages on any origin use it).
+- **The visitor cookie is limited to listed websites** (unlike Unomi 2.x and 3.x, which sent credentialed CORS headers to every origin; their `SameSite=Lax` cookie still
+  reached only pages on the same site).
   A website on another origin, another subdomain included, must be listed in `UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS` or in the
   `default` tenant's `publicCorsAllowedOrigins` property, for its requests to use and receive the cookie, whether it calls
   `context.json` or embeds `context.js` with a `<script>` tag. A plain `<script>` tag (without a `crossorigin` attribute)
