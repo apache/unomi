@@ -196,6 +196,8 @@ public class EventServiceImpl implements EventService {
             }
             return false;
         }
+        // Warn again if the tenant later empties its list.
+        tenantsWarnedWithoutAuthorizedIPs.remove(tenant.getItemId());
         return IPValidationUtils.isIpAuthorized(sourceIP, authorizedIPs);
     }
 

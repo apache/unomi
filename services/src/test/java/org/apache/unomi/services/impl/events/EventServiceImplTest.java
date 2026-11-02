@@ -587,6 +587,13 @@ public class EventServiceImplTest {
         unrestricted.setEventType("unrestricted");
         assertTrue(eventService.isEventAllowedForTenant(unrestricted, TENANT_1, "127.0.0.1"),
                 "Unrestricted event should still be allowed");
+
+        tenant.setAuthorizedIPs(null);
+        tenantService.saveTenant(tenant);
+        Event globalRestricted = createTestEvent();
+        globalRestricted.setEventType("globalRestricted");
+        assertFalse(eventService.isEventAllowedForTenant(globalRestricted, TENANT_1, "127.0.0.1"),
+                "A null authorizedIPs must be refused like an empty one");
     }
 
     @Test
