@@ -187,7 +187,7 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
      * administrator can already change any profile through the private API, so it is not gated.
      * GraphQL does not thread a client IP through this command, so for any other caller (public API
      * key) the source IP is {@code null}: a restricted type is always refused, and unrestricted types
-     * still pass.
+     * still pass. Without a tenant in the execution context, every event is refused.
      */
     static boolean isEventAllowedForCurrentTenant(final Event event,
                                                   final EventService eventService,
