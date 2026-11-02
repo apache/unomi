@@ -249,7 +249,7 @@ these 3 lines :
 
 [source]
 ----
-thirdparty.provider1.key=secret-key
+thirdparty.provider1.key=replace-with-a-long-unique-secret
 thirdparty.provider1.ipAddresses=127.0.0.1,::1
 thirdparty.provider1.allowedEvents=login,updateProperties
 ----
@@ -496,7 +496,7 @@ Authentication rules (Unomi 4.0):
 1. Public paths (for example `/cxs/context.json`, `/cxs/eventcollector`, `/cxs/client/*`) require a valid **public** API key via `X-Unomi-Api-Key` (unless <<_v2_compatibility_mode,single-tenant compatibility mode>> is enabled). Browser clients may call them from any origin, but only listed origins and Unomi's own origin may use the visitor cookie; see <<_public_tracker_origins,Websites on other origins>>.
 2. Private paths accept `tenantId:privateApiKey` Basic auth, or JAAS admin credentials. With JAAS, `X-Unomi-Tenant-Id` selects the tenant; when it is omitted, Unomi uses `org.apache.unomi.rest.authentication.defaultTenantId` (env `UNOMI_REST_AUTHENTICATION_DEFAULTTENANTID`, default `default`; not used yet by <<_v2_compatibility_mode,single-tenant compatibility mode>>, whose REST requests always run on `default`). Send `X-Unomi-Tenant-Id: system` only when a full administrator must work in the system context.
 3. Tenant administration (`/cxs/tenants`) requires system administrator JAAS credentials. Without `X-Unomi-Tenant-Id` it runs in the system context, so it works on a fresh install before any tenant exists.
-4. JAAS admin does **not** replace the public API key on public endpoints.
+4. JAAS admin credentials are also accepted on public endpoints in place of the public API key; without `X-Unomi-Tenant-Id` they run in the default admin tenant (rule 2).
 ==== Public vs Private Endpoints
 
 Public endpoints (requiring only public API key):

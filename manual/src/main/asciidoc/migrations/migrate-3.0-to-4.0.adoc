@@ -65,7 +65,7 @@ The main change in 4.0 is the introduction of tenant-based authentication. The s
 
 |Event Collection (`/context.json`)
 |None
-|Public API Key only
+|Tenant public API key (or tenant private key / System Admin)
 
 |Administrative Operations
 |System Admin (`karaf:$UNOMI_ROOT_PASSWORD`)
