@@ -662,20 +662,20 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
 
     /**
      * Check if an event is allowed in single-tenant compatibility mode.
-     * In V2, protected events required IP + X-Unomi-Peer (third-party key) authentication.
+     * As in Unomi 2 and 3, protected events require IP + X-Unomi-Peer (third-party key) authentication.
      *
      * @param event the event to check
      * @param request the HTTP request
      * @return true if the event is allowed, false otherwise
      */
     private boolean isEventAllowedInV2CompatibilityMode(Event event, HttpServletRequest request) {
-        // Check if this is a protected event type using the V2 third-party configuration
+        // Check if this is a protected event type using the third-party configuration
         if (!v2ThirdPartyConfigService.isProtectedEventType(event.getEventType())) {
             // Non-protected events are always allowed in single-tenant compatibility mode
             return true;
         }
 
-        // For protected events, check IP + third-party key (V2-style)
+        // For protected events, check IP + third-party key (as in Unomi 2 and 3)
         String sourceIP = v2ThirdPartyConfigService.resolveClientIp(request);
         String thirdPartyKey = request.getHeader("X-Unomi-Peer");
 
@@ -684,7 +684,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
             return false;
         }
 
-        // Validate the third-party provider using the V2 configuration
+        // Validate the third-party provider using the third-party configuration
         if (!v2ThirdPartyConfigService.validateProviderByKey(thirdPartyKey, event.getEventType(), sourceIP)) {
             LOGGER.debug("single-tenant compatibility mode: Protected event {} rejected - invalid third-party provider key: {} from IP: {}",
                         event.getEventType(), SecurityUtils.maskSecret(thirdPartyKey), sourceIP);

@@ -15,40 +15,55 @@
 [#_v2_compatibility_mode]
 === single-tenant compatibility mode
 
-This document explains how to use the single-tenant compatibility mode in Apache Unomi V3, which allows V2 client applications to work with Unomi V3 without requiring API keys.
+[[_single_tenant_compatibility_mode]]This document explains how to use single-tenant compatibility mode in Apache Unomi 4.0. The mode lets client applications
+written for Unomi 2.x or Unomi 3.x keep working without tenant API keys while you move them to the 4.0 authentication model.
 
 ==== Overview
 
-The single-tenant compatibility mode is designed to ease the migration from Unomi V2 to V3 by allowing V2 clients to continue working without immediate changes to their authentication logic. This mode provides backward compatibility while still leveraging the multi-tenant architecture of V3.
+The mode is a temporary bridge for Unomi 2 and Unomi 3 clients. It keeps public endpoints reachable without API keys, while
+Unomi 4 still stores data under tenants. Every REST request in this mode uses tenant `default`.
 
 ===== How It Works
 
 When single-tenant compatibility mode is enabled:
 
-- **Public endpoints** (like `/context.json`) require no authentication (like V2)
-- **Protected events** (like `login`, `updateProperties`) require IP + X-Unomi-Peer (like V2)
-- **Private endpoints** require system administrator authentication (like V2)
+- **Public endpoints** (like `/context.json`) require no authentication (like Unomi 2 and Unomi 3)
+- **Protected events** (like `login`, `updateProperties`) require IP + `X-Unomi-Peer` (like Unomi 2 and Unomi 3 third-party servers)
+- **Private endpoints** require system administrator authentication (like Unomi 2 and Unomi 3)
 - **Tenant `default`** is used for every operation. The mode cannot be pointed at another tenant: it ignores
   `X-Unomi-Tenant-Id` and the `defaultTenantId` setting on REST. GraphQL is not affected by the mode and still uses
   `defaultTenantId` for JAAS admin requests without a header, so keep that setting at `default` while the mode is on.
   The tenant is created on a public request if it is missing. Each node then keeps it in memory for
   about 30 seconds, so public requests do not wait on each other or re-read it from the database
   every time. A change made on another node is picked up after about that time.
-- **No authentication** is required for non-protected events (like V2)
-- **The visitor cookie is limited to listed websites** (unlike V2). A website on another origin, another subdomain included, must be listed, in `UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS` or in the `default` tenant's `publicCorsAllowedOrigins` property, for its requests to use and receive the cookie, whether it calls `context.json` or embeds `context.js` with a `<script>` tag. A plain `<script>` tag (without a `crossorigin` attribute) sends no `Origin`, so the listed website is then recognised by its `Referer`, which must be turned on with `org.apache.unomi.public.cors.matchReferer=true` (read <<_public_tracker_script_tag,the trade-offs>> first). A website served from Unomi's own origin needs no change. See <<_public_tracker_compatibility,Compatibility with Unomi 2.x and 3.x>>.
+- **No authentication** is required for non-protected events (like Unomi 2 and Unomi 3)
+- **The visitor cookie is limited to listed websites** (unlike Unomi 2.x and 3.x, which sent credentialed CORS headers to every origin; their `SameSite=Lax` cookie still
+  reached only pages on the same site).
+  A website on another origin, another subdomain included, must be listed in `UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS` or in the
+  `default` tenant's `publicCorsAllowedOrigins` property, for its requests to use and receive the cookie, whether it calls
+  `context.json` or embeds `context.js` with a `<script>` tag. A plain `<script>` tag (without a `crossorigin` attribute)
+  sends no `Origin`, so the listed website is then recognised by its `Referer`, which must be turned on with
+  `org.apache.unomi.public.cors.matchReferer=true` (read <<_public_tracker_script_tag,the trade-offs>> first). A website
+  served from Unomi's own origin needs no change. See <<_public_tracker_compatibility,Compatibility with Unomi 2.x and 3.x>>.
 
-This allows V2 clients to work with Unomi V3 immediately after migration, giving you time to gradually update client applications to use the new V3 authentication model.
+This allows Unomi 2 and Unomi 3 clients to work with Unomi 4.0 immediately after migration, giving you time to update
+applications to tenant API keys.
+
+Unomi 2 and Unomi 3 clients behave the same way in this mode. Third-party / peer servers keep using `X-Unomi-Peer` and
+`etc/org.apache.unomi.thirdparty.cfg` while the mode is on; that path is not used in normal multi-tenant mode, where the
+tenant's `authorizedIPs` apply instead. See <<_secured_events_configuration,Secured events configuration>> and
+https://issues.apache.org/jira/browse/UNOMI-1001[UNOMI-1001].
 
 ==== Prerequisites
 
 Before enabling single-tenant compatibility mode, ensure that:
 
-1. **Data Migration Completed**: Your V2 data has been migrated into tenant `default` using the migration scripts. The mode does not read data that lives in any other tenant.
-2. **V3 Installation**: Unomi V3 is properly installed and configured. If tenant `default` is missing, the first public request creates it.
+1. **Data Migration Completed**: Your data has been migrated into tenant `default` using the migration scripts. The mode does not read data that lives in any other tenant.
+2. **Unomi 4.0 Installation**: Unomi 4.0 is properly installed and configured. If tenant `default` is missing, the first public request creates it.
 
 ==== Configuration
 
-===== Enable V2 Compatibility Mode
+===== Enable single-tenant compatibility mode
 
 You can also set the environment variable `UNOMI_REST_AUTHENTICATION_SINGLETENANTCOMPATIBILITYMODEENABLED=true` (maps to `org.apache.unomi.rest.authentication.singleTenantCompatibilityModeEnabled` in `custom.system.properties`).
 
@@ -91,7 +106,7 @@ unomi:migrate 2.0.0
 
 The `migrate-4.0.0-10-tenantInitialization` script (run as part of that chain when migrating through 4.0) creates tenant `default`, which is the only tenant this mode uses. If that tenant is missing when the mode is on, the first public request creates it. See <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>> and <<_shell_commands,Shell commands>>.
 
-===== Step 2: Enable V2 Compatibility Mode
+===== Step 2: Enable single-tenant compatibility mode
 
 Enable single-tenant compatibility mode by updating the configuration file:
 
@@ -107,12 +122,12 @@ vi etc/org.apache.unomi.rest.authentication.cfg
 ./bin/start
 ```
 
-===== Step 3: Test V2 Clients
+===== Step 3: Test Unomi 2 / Unomi 3 clients
 
-Your V2 clients should now work without any changes:
+Your existing clients should now work without API key changes:
 
 ```java
-// V2-style authentication still works
+// Unomi 2 / 3 style authentication still works
 RestAssured.authentication = RestAssured.preemptive()
     .basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"));
 
@@ -126,17 +141,17 @@ RestAssured.given()
 
 ===== Step 4: Gradual Migration
 
-Over time, gradually update your clients to use V3 authentication:
+Over time, gradually update your clients to use 4.0 authentication:
 
 1. **Update client applications** to use API keys
-2. **Test with V3 authentication** while keeping single-tenant compatibility mode enabled
+2. **Test with 4.0 authentication** while keeping single-tenant compatibility mode enabled
 3. **Disable single-tenant compatibility mode** once all clients are updated
 
 ==== Client Migration Examples
 
-===== From V2 to V3 (with V2 Compatibility Mode)
+===== From Unomi 2 or 3 to Unomi 4 (with compatibility mode)
 
-**V2 Client (continues to work)**:
+**Legacy client (continues to work)**:
 ```java
 // This continues to work in single-tenant compatibility mode
 RestAssured.authentication = RestAssured.preemptive()
@@ -149,9 +164,9 @@ RestAssured.given()
     .post("/context.json");
 ```
 
-**V3 Client (new implementation)**:
+**Unomi 4 client (new implementation)**:
 ```java
-// New V3 client using API keys
+// New 4.0 client using API keys
 given()
     .header("X-Unomi-Api-Key", publicKey)
     .contentType(ContentType.JSON)
@@ -161,22 +176,22 @@ given()
 
 ===== Gradual Migration Strategy
 
-1. **Phase 1**: Enable single-tenant compatibility mode, V2 clients continue working
-2. **Phase 2**: Develop and test V3 clients alongside V2 clients
-3. **Phase 3**: Migrate clients one by one to V3 authentication
+1. **Phase 1**: Enable single-tenant compatibility mode, Unomi 2 / 3 clients continue working
+2. **Phase 2**: Develop and test 4.0 clients alongside legacy clients
+3. **Phase 3**: Migrate clients one by one to 4.0 authentication
 4. **Phase 4**: Disable single-tenant compatibility mode once all clients are migrated
 
 ==== Security Considerations
 
-===== V2 Compatibility Mode Security
+===== Compatibility mode security
 
 When single-tenant compatibility mode is enabled:
 
-- **Public endpoints** are accessible without authentication (same as V2)
-- **Protected events** require IP + X-Unomi-Peer authentication (same as V2)
-- **Private endpoints** require system administrator authentication (same as V2)
+- **Public endpoints** are accessible without authentication (same as Unomi 2 and Unomi 3)
+- **Protected events** require IP + `X-Unomi-Peer` authentication (same as Unomi 2 / 3 peer servers)
+- **Private endpoints** require system administrator authentication (same as Unomi 2 and Unomi 3)
 - **All operations** use tenant `default`
-- **Non-protected events** require no authentication (same as V2)
+- **Non-protected events** require no authentication (same as Unomi 2 and Unomi 3)
 
 ===== Protected Events and Peer Abilities
 
@@ -202,7 +217,7 @@ For protected events, clients must:
 
 All other event types are non-protected and require no peer header.
 
-===== V2 Third-Party Configuration
+===== Third-party configuration (compatibility mode only)
 
 Providers are configured in `etc/org.apache.unomi.thirdparty.cfg` with the pattern `thirdparty.{providerName}.{property}`:
 
@@ -234,11 +249,11 @@ A provider whose key is empty, shorter than 16 characters, or equal to the well-
 
 ===== Configuration Management
 
-The V2 third-party configuration supports dynamic updates:
+The third-party configuration supports dynamic updates:
 
 1. **Edit the configuration file**:
    ```bash
-   # Edit the V2 third-party configuration
+   # Edit the third-party configuration
    vi etc/org.apache.unomi.thirdparty.cfg
    ```
 
@@ -280,7 +295,7 @@ Operators should still treat IP allowlists as a second factor next to the peer k
 ===== Recommendations
 
 1. **Use single-tenant compatibility mode temporarily** during migration
-2. **Plan for gradual migration** to V3 authentication
+2. **Plan for gradual migration** to 4.0 authentication
 3. **Monitor access patterns** during the transition
 4. **Disable single-tenant compatibility mode** once migration is complete
 5. **Configure non-empty IP allowlists** and minimal `trustedProxies` before production use
@@ -289,7 +304,7 @@ Operators should still treat IP allowlists as a second factor next to the peer k
 
 ===== Common Issues
 
-**V2 clients still not working**:
+**Legacy clients still not working**:
 - Check configuration file: `etc/org.apache.unomi.rest.authentication.cfg`
 - Verify `singletenantcompatibility.enabled = true`
 - Confirm migrated data is in tenant `default`. The mode cannot be pointed at another tenant.
@@ -320,9 +335,9 @@ Check authentication filter logs:
 log:display | grep AuthenticationFilter
 ```
 
-==== Disabling V2 Compatibility Mode
+==== Disabling single-tenant compatibility mode
 
-Once all clients are migrated to V3 authentication:
+Once all clients are migrated to 4.0 authentication:
 
 1. **Update configuration**:
    ```properties
@@ -335,54 +350,24 @@ Once all clients are migrated to V3 authentication:
    ./bin/start
    ```
 
-3. **Verify all clients work** with V3 authentication
+3. **Verify all clients work** with 4.0 authentication
 
 4. **Monitor for any issues** and address them before final deployment
 
-==== Testing V2 Compatibility Mode
+==== Testing single-tenant compatibility mode
 
-The existing test framework supports testing single-tenant compatibility mode using system properties.
-
-===== Running Tests in V2 Compatibility Mode
-
-To run tests with single-tenant compatibility mode enabled:
-
-```bash
-# Enable single-tenant compatibility mode for tests
-mvn test -Dunomi.v2.compatibility.mode=true
-
-# Or set the property in your test environment
-export UNOMI_V2_COMPATIBILITY_MODE=true
-mvn test
-```
-
-===== Test Framework Integration
-
-The test framework automatically detects single-tenant compatibility mode and uses the appropriate client:
-
-- **V2 Compatibility Mode Enabled**: Uses `UnomiV2Client` for all tests
-- **V2 Compatibility Mode Disabled**: Uses normal V2/V3 detection logic
-
-This allows you to test both single-tenant compatibility mode and normal V3 mode using the same test suite.
-
-===== Example Test Execution
-
-```bash
-# Test with single-tenant compatibility mode (server should be configured for V2 compatibility)
-mvn test -Dunomi.v2.compatibility.mode=true -Dunomi.url=http://localhost:8181
-
-# Test with normal V3 mode
-mvn test -Dunomi.url=http://localhost:8181
-```
+The integration test `SingleTenantCompatibilityModeIT` (in `itests`) covers this mode. It turns the mode on and off at
+runtime through the `singletenantcompatibility.enabled` setting of `org.apache.unomi.rest.authentication`, so it runs
+as part of the normal integration test suite; no extra system property is needed.
 
 ==== Conclusion
 
-The single-tenant compatibility mode provides a smooth migration path from Unomi V2 to V3, allowing you to:
+The single-tenant compatibility mode provides a smooth migration path from Unomi 2 or Unomi 3 to Unomi 4, allowing you to:
 
-- **Maintain existing V2 clients** during migration
-- **Gradually migrate** to V3 authentication
-- **Leverage V3 features** while maintaining backward compatibility
+- **Maintain existing clients** during migration
+- **Gradually migrate** to 4.0 authentication
+- **Leverage Unomi 4 features** while maintaining backward compatibility
 - **Minimize downtime** during the migration process
-- **Test both modes** using the existing test framework
+- **Test both modes** with the integration test suite
 
-Use this mode as a temporary solution during your migration journey, and plan to disable it once all clients are updated to use V3 authentication.
+Use this mode as a temporary solution during your migration journey, and plan to disable it once all clients are updated to use 4.0 authentication.

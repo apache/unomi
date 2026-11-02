@@ -88,7 +88,7 @@ context.performMigrationStep("4.0.0-create-tenant-index", () -> {
         String publicKeyId  = UUID.randomUUID().toString()
         String privateKeyId = UUID.randomUUID().toString()
 
-        // Only the salted hash and a masked, display-safe representation are ever persisted (see UNOMI-938).
+        // Only the SHA-256 hash and a masked, display-safe representation are ever persisted (see UNOMI-938).
         // The plaintext values below are only available now, at generation time.
         String publicKeyHash  = hashApiKey(generatedPublicKey)
         String privateKeyHash = hashApiKey(generatedPrivateKey)
@@ -115,8 +115,8 @@ PRIVATE KEY  (HTTP Basic authentication as tenantId:privateKey -- protected / ad
 
 IMPORTANT: These keys cannot be recovered after this file is deleted.
            Save them in a password manager or secrets vault now.
-           This file is automatically deleted 24 hours after creation
-           by the next migration run. Delete it manually once saved.
+           A later migration run deletes this file once it is more than
+           24 hours old. Delete it manually once the keys are saved.
 ${sep}
 """
         Files.write(keyFile, fileContent.getBytes("UTF-8"))
@@ -126,7 +126,7 @@ ${sep}
         context.printMessage("  Public key  : ${generatedPublicKey}")
         context.printMessage("  Private key : ${generatedPrivateKey}")
         context.printMessage("  Keys file   : ${keyFile}")
-        context.printMessage("  (auto-deleted after 24 h; delete manually once keys are saved)")
+        context.printMessage("  (delete it once the keys are saved; a later migration run removes it after 24 h)")
         context.printMessage(sep)
 
         // Create the default tenant document
@@ -135,7 +135,7 @@ ${sep}
             "itemType": "tenant",
             "name": "Default Tenant",
             "tenantId": "system",
-            "description": "Default tenant created during migration to Unomi V3",
+            "description": "Default tenant created during migration to Unomi 4.0",
             "createdBy": "system-migration-4.0.0",
             "lastModifiedBy": "system-migration-4.0.0",
             "creationDate": "${isoDate}",

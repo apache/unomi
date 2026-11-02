@@ -143,9 +143,9 @@ class AuthenticationFilterBlankPasswordTest {
     }
 
     /**
-     * The ordinary V3 branch: not {@code tenants}, not a public path, V2 compatibility off. This is
+     * The ordinary multi-tenant branch: not {@code tenants}, not a public path, compatibility mode off. This is
      * the route most private REST calls take, and it consumes the Basic credential at its own call
-     * site — with only the {@code tenants} and V2 tests above, deleting the guard here would leave
+     * site — with only the {@code tenants} and compatibility-mode tests above, deleting the guard here would leave
      * the whole suite green.
      */
     @Test
@@ -159,7 +159,7 @@ class AuthenticationFilterBlankPasswordTest {
     }
 
     /**
-     * Control for the ordinary V3 branch: a non-blank credential must still be offered to the tenant
+     * Control for the ordinary multi-tenant branch: a non-blank credential must still be offered to the tenant
      * private-key check and then to JAAS.
      */
     @Test
@@ -190,7 +190,7 @@ class AuthenticationFilterBlankPasswordTest {
         assertUnauthorizedWithoutReachingJaas(requestContext);
     }
 
-    /** Control for the V2 branch: a non-blank credential must still reach JAAS there too. */
+    /** Control for the compatibility-mode branch: a non-blank credential must still reach JAAS there too. */
     @Test
     void filterPassesNonBlankPasswordToJaasOnAPrivatePathInV2CompatibilityMode() throws IOException {
         when(restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled()).thenReturn(true);

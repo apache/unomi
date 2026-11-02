@@ -211,17 +211,18 @@ Another (powerful) way to look at events is to use the SSH Console. You can conn
 Using the same credentials (the `karaf` user and your configured `UNOMI_ROOT_PASSWORD`) and then you can use command such as :
 
 - `event-tail` to view in realtime the events as they come in (CTRL+C to stop)
-- `event-list` to view the latest events
-- `event-view EVENT_ID` to view the details of a specific event
+- `tenant-set default` then `crud list event` to view recent events for that tenant
+- `crud read event EVENT_ID` to view the details of a specific event
 
 ==== Viewing the current profile
 
-By default, Unomi uses a cookie called context-profile-id to keep track of the current profile. You can use this the value of this cookie which contains a UUID to lookup the details of the profile. For example with the SSH console you can simply to:
+By default, Unomi uses a cookie called context-profile-id to keep track of the current profile. You can use this the value of this cookie which contains a UUID to lookup the details of the profile. For example with the SSH console you can simply do:
 
-    profile-view PROFILE_UUID
+    tenant-set default
+    crud read profile PROFILE_UUID
 
 Which will print out the details of the profile with the associated ID.
-Another interesting command is `profile-list` to list all the recently modified profiles
+Another interesting command is `crud list profile` to list recently modified profiles for the current tenant
 
 You could also retrieve the profile details using the REST API by using a request such as this one:
 
@@ -267,9 +268,9 @@ curl --location --request POST 'http://localhost:8181/cxs/rules' \
 
 The above rule will execute when a view event is received (which is automatically sent by the tracker when a page is loaded) and increments a property called `pageViewCount` on the user's profile.
 
-You can then reload then page and check with the `profile-view PROFILE_UUID` SSH command that the profile was updated with the new property and that it is incremented on each page reload.
+You can then reload the page and check with `crud read profile PROFILE_UUID` that the profile was updated with the new property and that it is incremented on each page reload.
 
-You can also use the `rule-list` command to display all the rules in the system and the `rule-tail` to watch in real-time which rules are executed. The `rule-view RULE_ID` command will let you view the contents of a rule.
+You can also use `crud list rule` to display the rules for the current tenant and `rule-tail` to watch in real-time which rules are executed. `crud read rule RULE_ID` shows the contents of a rule.
 
 ==== Adding personalization
 

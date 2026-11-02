@@ -58,7 +58,7 @@ public class V2ThirdPartyConfigService {
     private static final String PROP_TRUSTED_PROXIES = "trustedProxies";
 
     /**
-     * OSGi configuration for V2 third-party providers.
+     * OSGi configuration for third-party providers (single-tenant compatibility mode).
      */
     @ObjectClassDefinition(
         name = "Apache Unomi Third-Party Configuration",
@@ -232,7 +232,7 @@ public class V2ThirdPartyConfigService {
         int totalEvents = newProviders.values().stream()
                 .mapToInt(config -> config.getAllowedEvents().size())
                 .sum();
-        LOGGER.info("V2 Third-Party Configuration updated - {} providers with {} total protected events"
+        LOGGER.info("Third-party configuration updated - {} providers with {} total protected events"
                         + " (allowExampleKey={}, trustedProxies={})",
                 newProviders.size(), totalEvents, allowExample, proxies.size());
     }
@@ -311,7 +311,7 @@ public class V2ThirdPartyConfigService {
 
         Optional<ProviderConfig> match = findProviderByKey(providerKey);
         if (match.isEmpty()) {
-            LOGGER.debug("V2 compatibility mode: Unknown provider key: {}", SecurityUtils.maskSecret(providerKey));
+            LOGGER.debug("single-tenant compatibility mode: Unknown provider key: {}", SecurityUtils.maskSecret(providerKey));
             return false;
         }
 
@@ -319,14 +319,14 @@ public class V2ThirdPartyConfigService {
         String foundProviderId = config.getProviderId();
 
         if (!config.getAllowedEvents().contains(eventType)) {
-            LOGGER.debug("V2 compatibility mode: Event type {} not allowed for provider {} (key: {})",
+            LOGGER.debug("single-tenant compatibility mode: Event type {} not allowed for provider {} (key: {})",
                     eventType, foundProviderId, SecurityUtils.maskSecret(providerKey));
             return false;
         }
 
         boolean ipAuthorized = isIpAllowed(config, sourceIP);
         if (!ipAuthorized) {
-            LOGGER.debug("V2 compatibility mode: IP {} not authorized for provider {} (key: {})",
+            LOGGER.debug("single-tenant compatibility mode: IP {} not authorized for provider {} (key: {})",
                     sourceIP, foundProviderId, SecurityUtils.maskSecret(providerKey));
         }
         return ipAuthorized;

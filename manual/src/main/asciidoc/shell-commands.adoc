@@ -92,23 +92,28 @@ using the specified distribution feature name (unomi-distribution-elasticsearch 
 
 These commands are available once the application is running. If an argument is between brackets [] it means it is optional.
 
+Most list/view/remove operations on profiles, events, rules, segments, sessions, actions and conditions now go through
+`unomi:crud`. Set the tenant first with `tenant-set` (see <<_tenant_commands,Tenant commands>>). Use `unomi:crud help TYPE`
+for the fields each type accepts.
+
 .Table Runtime commands
 |===
 |Command|Arguments|Description
 
-|rule-list
-|[--csv] [maxEntries]
-|Lists all the rules registered in the Apache Unomi server. The maxEntries (defaults to 100) will allow you to specify
-how many entries need to be retrieved. If the value is inferior to the total value, a message will display the total
-value of rules registered in the server. If you add the "--csv" option the list will be output as a CSV formatted table.
-Note: Options must come before arguments, so use `rule-list --csv 100` not `rule-list 100 --csv`.
-|rule-view
-|rule-id
-|Dumps a single rule in JSON. The rule-id argument can be retrieved from the `rule-list` command output.
-|rule-remove
-|rule-id
-|Removes a single rule from Apache Unomi. The `rule-id` argument can be retrieved from the `rule-list` command output.
-Warning: no confirmation is asked, be careful with this command.
+|crud list
+|type [[--csv] [-n maxEntries]]
+|Lists items of the given type for the current tenant. Common types: `profile`, `event`, `rule`, `segment`, `session`,
+`actiontype`, `conditiontype`. Example: `crud list profile` or `crud list rule --csv`.
+|crud read
+|type item-id
+|Dumps one item as JSON. Example: `crud read profile PROFILE_ID` or `crud read rule RULE_ID`.
+|crud delete
+|type item-id
+|Deletes one item. Warning: no confirmation is asked. Example: `crud delete profile PROFILE_ID`.
+|crud create / crud update
+|type JSON-or-file-URI [for update: item-id then JSON]
+|Create or update an item from a JSON string or a `file://` path. Use `crud help TYPE` for required fields.
+
 |rule-reset-stats
 |n/a
 |Resets the rule statistics. This is notably useful when trying to understand rule performance and impact
@@ -129,64 +134,6 @@ created, EXECUTE means the rule's actions are being executed.
 |event-tail
 |n/a
 |Dumps any incoming events to the Apache Unomi server to the console. Use CTRL+C to exit tail
-|event-view
-|event-id
-|Dumps a single event in JSON. The `event-id` can be retrieved from the event-tail command output.
-|event-list
-|[--csv] [max-entries] [event-type]
-|List the last events processed by Apache Unomi. The `max-entries` parameter can be used to control how many events are
-displayed (default is 100). The `event-type` makes it possible to filter the list by event type. The `--csv` argument is used to output the list as a CSV list instead of an ASCII table.
-Note: Options must come before arguments, so use `event-list --csv 100 view` not `event-list 100 view --csv`.
-Note: Options must come before arguments, so use `event-list --csv 100 view` not `event-list 100 view --csv`.
-|event-search
-|profile-id [event-type] [max-entries]
-|This command makes it possible to search for the last events by `profile-id` and by `event-type`. A `max-entries`
-parameter (with a default value of 100) is also accepted to control the number of results returned by the search.
-
-|action-list
-|[--csv]
-|Lists all the rule actions registered in the Apache Unomi server. This command is useful when developing plugins to
-check that everything is properly registered. If you add the "--csv" option the list will be output as a CSV formatted table
-|action-view
-|action-id
-|Dumps a single action in JSON. The action-id argument can be retrieved from the `action-list` command output.
-
-|condition-list
-|[--csv]
-|List all the conditions registered in the server. If you add the "--csv" option the list will be output as a CSV formatted table
-|condition-view
-|condition-id
-|Dumps a single condition in JSON. The condition-id can be retrieved from the `condition-list` command output.
-
-|profile-list
-|[--csv]
-|List the last 10 modified profiles. If you add the "--csv" option the list will be output as a CSV formatted table
-|profile-view
-|profile-id
-|Dumps a single profile in JSON. The profile-id argument can be retrieved from the `profile-list` command output.
-|profile-remove
-|profile-id
-|Removes a profile identified by `profile-id` argument. Warning: no confirmation is asked so be careful with this command!
-
-|segment-list
-|[--csv]
-|Lists all the segments registered in the Apache Unomi server. If you add the "--csv" option the list will be output as a CSV formatted table
-|segment-view
-|segment-id
-|Dumps a single segment in JSON. The segment-id argument can be retrieved from the `segment-list` command output.
-|segment-remove
-|segment-id
-|Removes a single segment identified by the `segment-id` argument. Warning: no confirmation is asked so be careful with
-this command!
-
-|session-list
-|[--csv]
-|Lists the last 10 sessions by last event date. If you add the "--csv" option the list will be output
-                                                as a CSV formatted table
-|session-view
-|session-id
-|Dumps a single session in JSON. The session-id argument can be retrieved from the `session-list`, `profile-list` or
- `event-tail` command output.
 
 |deploy-definition
 |[bundleId] [type] [fileName]
@@ -207,6 +154,7 @@ command: `undeploy-definition BUNDLE_ID * *` when `BUNDLE_ID` is the identifier 
 |===
 
 
+[#_tenant_commands]
 ==== Tenant commands
 
 Multi-tenant shell operations (Unomi 4.0+). See <<_multitenancy,Multi-tenancy>> for REST equivalents.
@@ -228,19 +176,19 @@ Multi-tenant shell operations (Unomi 4.0+). See <<_multitenancy,Multi-tenancy>> 
 |List tenants (excludes the built-in `system` tenant from normal listings).
 
 |crud read tenant
-|-i tenant-id
+|tenant-id
 |Show one tenant as JSON.
 
 |crud create tenant
-|-d JSON or --file path
-|Create a tenant. Use `help` on the command for required properties.
+|JSON or `file://` path
+|Create a tenant. Use `crud help tenant` for the accepted properties.
 
 |crud update tenant
-|-i tenant-id -d JSON or --file path
-|Update tenant metadata.
+|tenant-id JSON or `file://` path
+|Update tenant metadata. The shell names the restricted event types property `restrictedEventPermissions`.
 
 |crud delete tenant
-|-i tenant-id
+|tenant-id
 |Delete a tenant.
 
 |crud list apikey
@@ -248,7 +196,7 @@ Multi-tenant shell operations (Unomi 4.0+). See <<_multitenancy,Multi-tenancy>> 
 |List API keys across all tenants (keys are masked in the table).
 
 |crud create apikey
-|-d JSON
+|JSON
 |Create an API key for a tenant (`tenantId`, `keyType`, optional `validityPeriod`).
 
 |cache
