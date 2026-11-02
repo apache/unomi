@@ -13,7 +13,7 @@
     "build": "yarn rollup --config"
   },
   "dependencies": {
-    "apache-unomi-tracker": "^1.1.0"
+    "apache-unomi-tracker": "git+https://github.com/apache/unomi-tracker.git#af3b91e3459aa2c6505517ed1ea7f94d55cce3a3"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
