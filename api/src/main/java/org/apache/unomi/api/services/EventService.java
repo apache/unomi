@@ -62,8 +62,13 @@ public interface EventService {
     int send(Event event);
 
     /**
-     * Checks whether the tenant may send the given event.
-     * Restricted event types must be explicitly allowed per tenant.
+     * Checks whether the tenant may receive the given event from a client.
+     * Restricted event types (the globally restricted ones plus the tenant's own restricted event
+     * types) are accepted only from a source IP in the tenant's authorized IPs: a tenant with no
+     * authorized IP, or a {@code null} source IP, refuses them. Other event types are allowed. A
+     * {@code null} event, a {@code null} tenant id or an unknown tenant refuses every event.
+     * This method does not consider the caller's privileges; callers that trust the caller (system or
+     * tenant administrator) skip it.
      *
      * @param event event to test
      * @param tenantId tenant identifier

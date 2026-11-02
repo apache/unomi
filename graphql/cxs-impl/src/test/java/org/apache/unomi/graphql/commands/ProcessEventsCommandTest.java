@@ -19,6 +19,7 @@ package org.apache.unomi.graphql.commands;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,8 @@ import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,6 +47,8 @@ class ProcessEventsCommandTest {
     private ExecutionContextManager executionContextManager;
     @Mock
     private ExecutionContext executionContext;
+    @Mock
+    private SecurityService securityService;
 
     @Test
     void allowsEventWhenTenantGatePasses() {
@@ -52,7 +57,7 @@ class ProcessEventsCommandTest {
         when(executionContext.getTenantId()).thenReturn(TENANT_ID);
         when(eventService.isEventAllowedForTenant(event, TENANT_ID, null)).thenReturn(true);
 
-        assertTrue(ProcessEventsCommand.isEventAllowedForCurrentTenant(event, eventService, executionContextManager));
+        assertTrue(ProcessEventsCommand.isEventAllowedForCurrentTenant(event, eventService, executionContextManager, securityService));
         verify(eventService).isEventAllowedForTenant(event, TENANT_ID, null);
     }
 
@@ -63,7 +68,7 @@ class ProcessEventsCommandTest {
         when(executionContext.getTenantId()).thenReturn(TENANT_ID);
         when(eventService.isEventAllowedForTenant(event, TENANT_ID, null)).thenReturn(false);
 
-        assertFalse(ProcessEventsCommand.isEventAllowedForCurrentTenant(event, eventService, executionContextManager));
+        assertFalse(ProcessEventsCommand.isEventAllowedForCurrentTenant(event, eventService, executionContextManager, securityService));
         verify(eventService).isEventAllowedForTenant(event, TENANT_ID, null);
     }
 
@@ -72,8 +77,17 @@ class ProcessEventsCommandTest {
         Event event = viewEvent();
         when(eventService.isEventAllowedForTenant(event, null, null)).thenReturn(false);
 
-        assertFalse(ProcessEventsCommand.isEventAllowedForCurrentTenant(event, eventService, null));
+        assertFalse(ProcessEventsCommand.isEventAllowedForCurrentTenant(event, eventService, null, securityService));
         verify(eventService).isEventAllowedForTenant(event, null, null);
+    }
+
+    @Test
+    void trustedCallerSkipsTenantGate() {
+        Event event = new Event("updateProperties", null, new Profile(), null, null, null, new Date());
+        when(securityService.hasSystemAccess()).thenReturn(true);
+
+        assertTrue(ProcessEventsCommand.isEventAllowedForCurrentTenant(event, eventService, executionContextManager, securityService));
+        verify(eventService, never()).isEventAllowedForTenant(any(), any(), any());
     }
 
     private static Event viewEvent() {

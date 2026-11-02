@@ -470,6 +470,10 @@ In addition to tenant API keys, Unomi 4.0 hardens several contracts that can bre
 |Known defaults such as `karaf` / `karaf` were common in samples
 |Set `UNOMI_ROOT_PASSWORD` and `UNOMI_HEALTHCHECK_PASSWORD` before start (no shipped known defaults).
 
+|Protected events from public callers
+|Accepted only from a configured third-party server (`X-Unomi-Peer` key and IP)
+|Accepted only from an IP in the tenant's `authorizedIPs`; an empty list refuses them. Tenant private key and administrator callers are not IP-checked. See <<_multitenancy,Multi-tenancy>>.
+
 |Groovy Actions / Router import-export REST
 |Often callable with tenant private key
 |Requires **system administrator** (`ADMINISTRATOR`), not tenant administrator.

@@ -21,6 +21,7 @@ import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLInputObjectType;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.ExecutionContext;
+import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.ProfileService;
@@ -166,7 +167,8 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
         final EventService eventService = serviceManager.getService(EventService.class);
 
         if (!isEventAllowedForCurrentTenant(event, eventService,
-                serviceManager.getService(ExecutionContextManager.class))) {
+                serviceManager.getService(ExecutionContextManager.class),
+                serviceManager.getService(SecurityService.class))) {
             LOGGER.debug("Event type {} is not authorized for this tenant, skipping it", event.getEventType());
             return;
         }
@@ -180,14 +182,20 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
     }
 
     /**
-     * Same restricted-event-type check as REST {@code EventService#send} callers. GraphQL does not
-     * currently thread a client IP through this command, so the source IP is {@code null}: a
-     * restricted type is refused when the tenant has an authorized-IP list, and unrestricted types
-     * still pass.
+     * Same restricted-event-type check as the REST event endpoints
+     * ({@link EventService#isEventAllowedForTenant}). A tenant or system
+     * administrator can already change any profile through the private API, so it is not gated.
+     * GraphQL does not thread a client IP through this command, so for any other caller (public API
+     * key) the source IP is {@code null}: a restricted type is always refused, and unrestricted types
+     * still pass. Without a tenant in the execution context, every event is refused.
      */
     static boolean isEventAllowedForCurrentTenant(final Event event,
                                                   final EventService eventService,
-                                                  final ExecutionContextManager executionContextManager) {
+                                                  final ExecutionContextManager executionContextManager,
+                                                  final SecurityService securityService) {
+        if (securityService.hasSystemAccess()) {
+            return true;
+        }
         final ExecutionContext executionContext = executionContextManager != null
                 ? executionContextManager.getCurrentContext() : null;
         final String tenantId = executionContext != null ? executionContext.getTenantId() : null;
