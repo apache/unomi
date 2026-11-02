@@ -73,6 +73,12 @@ curl -X POST http://localhost:8181/cxs/tenants \
 
 `publicCorsAllowedOrigins` is optional: it lists the websites that may use the visitor cookie with this tenant's key (see <<_public_tracker_tenant_origins,Websites listed by each tenant>>). An invalid entry is refused with `400`.
 
+Protected event types (`sessionCreated`, `sessionReassigned`, `profileUpdated`, `ruleFired`, `updateProperties`, plus
+any extra types listed in the tenant's `restrictedEventTypes`) are accepted from a public API key caller only when the
+caller IP is in the tenant's `authorizedIPs` (addresses or CIDR ranges). An empty `authorizedIPs` list, the default,
+refuses them from every public caller; update the tenant to set it. Callers using the tenant private key or
+administrator credentials are not IP-checked.
+
 The create response includes the tenant with **masked** API key metadata only (plaintext secrets are not returned and cannot be recovered from storage):
 
 [source,json]

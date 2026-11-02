@@ -490,6 +490,67 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
+    public void testPublicHttp_protectedEventNeedsAuthorizedIP() throws Exception {
+        String sessionId = "protected-ip-session-" + System.currentTimeMillis();
+        ContextRequest establishReq = new ContextRequest();
+        establishReq.setSessionId(sessionId);
+        HttpPost establish = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(establish);
+        establish.setEntity(new StringEntity(getObjectMapper().writeValueAsString(establishReq), ContentType.APPLICATION_JSON));
+        RequestResponse established = executeContextJSONRequest(establish, sessionId);
+        String profileId = established.getContextResponse().getProfileId();
+        keepTrying("Profile not found", () -> profileService.load(profileId), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // The test tenant authorizes no IP: a protected event from a public caller is refused,
+        // even on its own profile.
+        sendOwnProfileUpdate(sessionId, established.getCookieHeaderValue(), profileId, "REFUSED");
+        shouldBeTrueUntilEnd("Protected event must be refused while the tenant authorizes no IP",
+                () -> profileService.load(profileId),
+                p -> p.getProperty("firstName") == null,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
+
+        Tenant settings = tenantService.getTenant(testTenant.getItemId());
+        settings.setAuthorizedIPs(new HashSet<>(Arrays.asList("127.0.0.1", "::1")));
+        tenantService.updateTenantSettings(settings);
+        try {
+            keepTrying("Protected event must be accepted from an authorized IP", () -> {
+                try {
+                    sendOwnProfileUpdate(sessionId, established.getCookieHeaderValue(), profileId, "ACCEPTED");
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                return profileService.load(profileId);
+            }, p -> "ACCEPTED".equals(p.getProperty("firstName")), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        } finally {
+            // The tenant is shared by the whole suite (PerSuite): put the default back.
+            Tenant restore = tenantService.getTenant(testTenant.getItemId());
+            restore.setAuthorizedIPs(new HashSet<>());
+            tenantService.updateTenantSettings(restore);
+        }
+    }
+
+    private void sendOwnProfileUpdate(String sessionId, String cookie, String profileId, String firstName) throws Exception {
+        Event updateEvent = new Event();
+        updateEvent.setEventType("updateProperties");
+        updateEvent.setScope(TEST_SCOPE);
+        Map<String, Object> props = new HashMap<>();
+        props.put("targetId", profileId);
+        props.put("targetType", "profile");
+        props.put("update", Collections.singletonMap("properties.firstName", firstName));
+        updateEvent.setProperties(props);
+
+        ContextRequest request = new ContextRequest();
+        request.setSessionId(sessionId);
+        request.setEvents(Collections.singletonList(updateEvent));
+        HttpPost post = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(post);
+        post.addHeader("Cookie", cookie);
+        post.setEntity(new StringEntity(getObjectMapper().writeValueAsString(request), ContentType.APPLICATION_JSON));
+        executeContextJSONRequest(post, sessionId);
+    }
+
+    @Test
     public void testPrivateKeyHttp_updateProperties_canUpdateAnotherProfile() throws Exception {
         String otherId = "trusted-update-other-" + System.currentTimeMillis();
         Profile other = new Profile(otherId);

@@ -183,6 +183,11 @@ public class EventServiceImpl implements EventService {
 
     private boolean checkIPAuthorization(Tenant tenant, String sourceIP) {
         Set<String> authorizedIPs = tenant.getAuthorizedIPs();
+        // Fail closed like the 3.0 third-party check: a tenant that authorized no IP accepts
+        // protected events from nobody. IPValidationUtils treats an empty set as "no restriction".
+        if (authorizedIPs == null || authorizedIPs.isEmpty()) {
+            return false;
+        }
         return IPValidationUtils.isIpAuthorized(sourceIP, authorizedIPs);
     }
 

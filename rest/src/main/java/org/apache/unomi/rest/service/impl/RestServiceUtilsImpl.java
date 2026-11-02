@@ -476,8 +476,11 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                             continue;
                         }
                     } else {
-                        // Normal V3 event authorization
-                        if (!eventService.isEventAllowedForTenant(event, tenantId, eventsRequestContext.getRequest().getRemoteAddr())) {
+                        // Normal V3 event authorization. A tenant or system administrator can already
+                        // change any profile through the private endpoints, so the IP gate on
+                        // protected events only applies to public callers.
+                        if (!securityService.hasSystemAccess()
+                                && !eventService.isEventAllowedForTenant(event, tenantId, eventsRequestContext.getRequest().getRemoteAddr())) {
                             LOGGER.debug("Tenant is not authorized to send event {} from IP {}", event.getEventType(), eventsRequestContext.getRequest().getRemoteAddr());
                             //Don't count the event that failed
                             eventsRequestContext.setProcessedItems(eventsRequestContext.getProcessedItems() - 1);

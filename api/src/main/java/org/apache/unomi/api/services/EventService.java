@@ -63,7 +63,8 @@ public interface EventService {
 
     /**
      * Checks whether the tenant may send the given event.
-     * Restricted event types must be explicitly allowed per tenant.
+     * Restricted event types must be explicitly allowed per tenant: they are accepted only from a
+     * source IP in the tenant's authorized IPs, so a tenant with no authorized IP refuses them.
      *
      * @param event event to test
      * @param tenantId tenant identifier

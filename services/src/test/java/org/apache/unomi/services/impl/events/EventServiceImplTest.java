@@ -566,6 +566,30 @@ public class EventServiceImplTest {
     }
 
     @Test
+    public void testIsEventAllowedForTenant_NoAuthorizedIPsRefusesRestrictedEvents() {
+        eventService.setRestrictedEventTypeIds(new HashSet<>(Arrays.asList("globalRestricted")));
+
+        Tenant tenant = new Tenant();
+        tenant.setItemId(TENANT_1);
+        tenant.setRestrictedEventTypes(new HashSet<>(Arrays.asList("tenantRestricted")));
+        tenantService.saveTenant(tenant);
+
+        for (String eventType : Arrays.asList("globalRestricted", "tenantRestricted")) {
+            Event event = createTestEvent();
+            event.setEventType(eventType);
+            assertFalse(eventService.isEventAllowedForTenant(event, TENANT_1, "127.0.0.1"),
+                    eventType + " must be refused when the tenant authorized no IP");
+            assertFalse(eventService.isEventAllowedForTenant(event, TENANT_1, null),
+                    eventType + " must be refused without a source IP");
+        }
+
+        Event unrestricted = createTestEvent();
+        unrestricted.setEventType("unrestricted");
+        assertTrue(eventService.isEventAllowedForTenant(unrestricted, TENANT_1, "127.0.0.1"),
+                "Unrestricted event should still be allowed");
+    }
+
+    @Test
     public void testEventAllowed() {
         String tenantId = "test_tenant";
         String allowedSourceIP = "127.0.0.1";
