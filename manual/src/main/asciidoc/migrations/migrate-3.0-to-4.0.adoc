@@ -23,6 +23,7 @@ The key innovation in 4.0 is the introduction of **tenant isolation** for all da
 - **Tenant-specific API keys** for secure access control
 - **Backward compatibility** with system administrator access for management operations
 
+[#_updating_applications_consuming_unomi]
 === Updating applications consuming Unomi
 
 ==== Authentication Model Changes
@@ -325,7 +326,7 @@ the segment and scoring lists itself instead of leaving it to the search engine.
 Paging and sorting follow the 3.0 rules:
 
 * `offset` and `limit` page the merged list. A missing `limit` returns `defaultQueryLimit` items, 10 unless
-  configured (see <<changing_the_default_configuration_using_property_files,the search engine configuration>>), and `-1` returns every item.
+  configured (see <<_changing_the_default_configuration_using_property_files,the search engine configuration>>), and `-1` returns every item.
   The response echoes the requested `offset` and `limit`.
 * `sortby` takes the same syntax: comma-separated `field` or `field:desc` criteria. Any criterion other than an
   exact `:desc` suffix sorts ascending.

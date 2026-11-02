@@ -357,6 +357,7 @@ moment shutdown begins and held locks age out normally for peers to recover. And
 `COMPLETED` / `FAILED` write, the heartbeat is stopped (waiting out any in-flight tick) so a late renewal
 cannot invalidate the terminal compare-and-set.
 
+[#_renewal_timing_limits_with_the_default_1_s_refresh_interval]
 ===== Renewal timing limits with the default 1 s refresh interval
 
 Renewal is safe with the ES/OS default index refresh batching (`refresh_interval` = 1 s) because none of

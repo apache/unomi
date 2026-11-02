@@ -26,7 +26,7 @@ You can connect to the Apache Karaf SSH Shell using the following command:
 
     ssh -p 8102 karaf@localhost
 
-Authenticate with the `karaf` user and the password from `UNOMI_ROOT_PASSWORD` (Unomi does not ship a known default password). Set the password before start; see <<_getting_started,Getting started>> and <<_client_facing_hardening_4_0,client-facing hardening>>.
+Authenticate with the `karaf` user and the password from `UNOMI_ROOT_PASSWORD` (Unomi does not ship a known default password). Set the password before start; see <<_getting_started_with_unomi,Getting started>> and <<_client_facing_hardening_4_0,client-facing hardening>>.
 
 Once connected you can simply type in :
 

@@ -43,6 +43,7 @@ Docker Compose you can put the environment variables in the docker-compose.yml f
 If you want to "save" the environment values in a file, you can use the `bin/setenv(.bat)` to setup the environment
 variables you want to use.
 
+[#_changing_the_default_configuration_using_property_files]
 === Changing the default configuration using property files
 
 If you want to change the default configuration using property files instead of environment variables, you can perform
@@ -283,6 +284,7 @@ import should start right away.
 Otherwise, import should start at the next startup. Import runs in background, but can take about 15 minutes.
 At the end, you should have about 4 million entries in the geonames index.
 
+[#_rest_api_security]
 === REST API Security
 
 The Apache Unomi Context Server REST API is protected using JAAS authentication and using Basic or Digest HTTP auth.
@@ -2077,7 +2079,7 @@ public interface HealthCheckProvider {
 
 Calls to provider are supposed to be done at a regular rate (every 15 seconds for example) and should be fast to execute. Feel free to include any caching strategy if needed.
 
-===== Health check for another persistence backend
+==== Health check for another persistence backend
 
 A persistence backend that is not packaged with Unomi (PostgreSQL, for example) integrates with the health check the same way as Elasticsearch and OpenSearch:
 
