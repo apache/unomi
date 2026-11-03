@@ -208,7 +208,7 @@
             <plugin>
                 <groupId>com.googlecode.maven-download-plugin</groupId>
                 <artifactId>download-maven-plugin</artifactId>
-                <version>1.3.0</version>
+                <version>1.13.0</version>
                 <executions>
                     <execution>
                         <!-- the wget goal actually binds itself to this phase by default -->
