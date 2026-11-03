@@ -40,9 +40,9 @@ compile and be stable. These are recommended for users that prefer to work from 
 packaged binaries on the [Apache Unomi website](https://unomi.apache.org). 
 
 
-Apache Unomi 3.x
+Apache Unomi 4.x
 --------------
-Unomi 3.0+ requires **Java 17**, **Karaf 4.4**, and **Elasticsearch 9.x**. Unomi 4.0 adds **multi-tenancy**, **OpenSearch 3** support, a cluster-aware **task scheduler**, and persistence-based clustering.
+Unomi 4.x requires **Java 17**, **Karaf 4.4**, and **Elasticsearch 9.x** or **OpenSearch 3**. It adds **multi-tenancy**, a cluster-aware **task scheduler**, and persistence-based clustering on top of the 3.x platform.
 
 * Build and run: see `manual/src/main/asciidoc/building-and-deploying.adoc` or `manual/src/main/asciidoc/5-min-quickstart.adoc`
 * Docker: see `docker/README.md`

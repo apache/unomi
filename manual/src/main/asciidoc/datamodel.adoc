@@ -251,6 +251,7 @@ In the following example, the scope uses the unique identifier of a web site cal
 }
 ----
 
+[#_item]
 === Item
 
 Unomi structures the information it collects using the concept of `Item` which provides the base information (an identifier and a type) the context server needs to process and store the data.

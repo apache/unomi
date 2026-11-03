@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-= Apache Unomi 3.x - Documentation
+= Apache Unomi 4.x - Documentation
 Apache Software Foundation
 :doctype: book
 :toc: left
@@ -60,7 +60,7 @@ ifndef::backend-pdf[]
 Apache Unomi™
 
 ++++
-<h1 class="display-title">Apache Unomi 3.x<br><span class="text-hero-accent">Documentation</span></h1>
+<h1 class="display-title">Apache Unomi 4.x<br><span class="text-hero-accent">Documentation</span></h1>
 ++++
 
 [.cover-meta.lead]

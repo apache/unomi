@@ -15,7 +15,7 @@
 [#_building]
 === Building
 
-Apache Unomi 3.x provides a convenient `build.sh` script that simplifies the build process with
+Apache Unomi 4.x provides a convenient `build.sh` script that simplifies the build process with
 enhanced error handling, preflight validation, and deployment options. See the
 <<_using_the_build_script,Using the build.sh script>> section below for details. Alternatively, you can build using Maven
 directly as described in this section.
@@ -75,7 +75,7 @@ TIP: On a non-English Windows env, the Asciidoctor Maven Plugin may fail to
 [#_using_the_build_script]
 ==== Using the build.sh script
 
-Apache Unomi 3.x provides a unified `build.sh` script that simplifies the build, deployment, and execution process.
+Apache Unomi 4.x provides a unified `build.sh` script that simplifies the build, deployment, and execution process.
 This script replaces multiple legacy build scripts and provides enhanced error handling, colorized output, and
 comprehensive environment validation.
 
@@ -240,7 +240,7 @@ To merge the branch into master.
 
 ==== Installing a Search Engine
 
-Apache Unomi 3.x does not embed a search engine. Install Elasticsearch 9.x or OpenSearch 3.x as a standalone service. See <<_migrate_from_2_x_to_3_0,Migrate from 2.x to 3.0>> for version requirements.
+Apache Unomi 4.x does not embed a search engine. Install Elasticsearch 9.x or OpenSearch 3.x as a standalone service. See <<_migrate_from_2_x_to_3_0,Migrate from 2.x to 3.0>> and <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>> for version requirements.
 
 ===== Option 1: Using Elasticsearch
 

@@ -43,6 +43,7 @@ Docker Compose you can put the environment variables in the docker-compose.yml f
 If you want to "save" the environment values in a file, you can use the `bin/setenv(.bat)` to setup the environment
 variables you want to use.
 
+[#_changing_the_default_configuration_using_property_files]
 === Changing the default configuration using property files
 
 If you want to change the default configuration using property files instead of environment variables, you can perform
@@ -283,6 +284,7 @@ import should start right away.
 Otherwise, import should start at the next startup. Import runs in background, but can take about 15 minutes.
 At the end, you should have about 4 million entries in the geonames index.
 
+[#_rest_api_security]
 === REST API Security
 
 The Apache Unomi Context Server REST API is protected using JAAS authentication and using Basic or Digest HTTP auth.
@@ -1370,7 +1372,7 @@ If a reverse proxy terminates TLS in front of Unomi, the request Unomi sees is p
 * the proxy's address is listed in `org.apache.unomi.ip.trustedProxies` (`UNOMI_IP_TRUSTED_PROXIES`). The default list covers every private address range; narrow it to your proxies, or any host on those networks can claim HTTPS.
 * the proxy sends `X-Forwarded-Proto: https`. Configure it to overwrite the header: if any listed protocol is not `https`, the request is treated as plain HTTP.
 
-Changing `org.apache.unomi.ip.trustedProxies` in `custom.system.properties` needs a restart. The setting does not apply to `X-Unomi-Peer` keys in <<_single_tenant_compatibility_mode,single-tenant compatibility mode>>, which keep their Unomi 3.0 behaviour, nor to merges Unomi runs itself outside an HTTP request.
+Changing `org.apache.unomi.ip.trustedProxies` in `custom.system.properties` needs a restart. The setting does not apply to `X-Unomi-Peer` keys in <<_v2_compatibility_mode,single-tenant compatibility mode>>, which keep their Unomi 3.0 behaviour, nor to merges Unomi runs itself outside an HTTP request.
 
 ==== Troubleshooting profile merges
 
@@ -1594,7 +1596,7 @@ shell commands in the "Shell commands" section of the documentation.
 
 === Search engine authentication and security
 
-Apache Unomi 3.x talks to **Elasticsearch 9** or **OpenSearch 3** using the settings below. Prefer `etc/custom.system.properties` (or `unomi.custom.system.properties` / environment variables). The persistence OSGi configs (`etc/org.apache.unomi.persistence.elasticsearch.cfg` / `...opensearch.cfg`) expose the same values as short keys (`username`, `password`, `sslEnable`, `sslTrustAllCertificates`) that resolve from those system properties.
+Apache Unomi 4.x talks to **Elasticsearch 9** or **OpenSearch 3** using the settings below. Prefer `etc/custom.system.properties` (or `unomi.custom.system.properties` / environment variables). The persistence OSGi configs (`etc/org.apache.unomi.persistence.elasticsearch.cfg` / `...opensearch.cfg`) expose the same values as short keys (`username`, `password`, `sslEnable`, `sslTrustAllCertificates`) that resolve from those system properties.
 
 Elasticsearch security reference: https://www.elastic.co/guide/en/elasticsearch/reference/current/security-minimal-setup.html[Elasticsearch security].
 OpenSearch security reference: https://docs.opensearch.org/docs/latest/security/[OpenSearch Security].
@@ -2077,7 +2079,7 @@ public interface HealthCheckProvider {
 
 Calls to provider are supposed to be done at a regular rate (every 15 seconds for example) and should be fast to execute. Feel free to include any caching strategy if needed.
 
-===== Health check for another persistence backend
+==== Health check for another persistence backend
 
 A persistence backend that is not packaged with Unomi (PostgreSQL, for example) integrates with the health check the same way as Elasticsearch and OpenSearch:
 
