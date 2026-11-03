@@ -15,7 +15,7 @@
 [#_v2_compatibility_mode]
 === single-tenant compatibility mode
 
-[[_single_tenant_compatibility_mode]]This document explains how to use single-tenant compatibility mode in Apache Unomi 4.0. The mode lets client applications
+This document explains how to use single-tenant compatibility mode in Apache Unomi 4.0. The mode lets client applications
 written for Unomi 2.x or Unomi 3.x keep working without tenant API keys while you move them to the 4.0 authentication model.
 
 ==== Overview

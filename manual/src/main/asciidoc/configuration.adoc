@@ -1372,7 +1372,7 @@ If a reverse proxy terminates TLS in front of Unomi, the request Unomi sees is p
 * the proxy's address is listed in `org.apache.unomi.ip.trustedProxies` (`UNOMI_IP_TRUSTED_PROXIES`). The default list covers every private address range; narrow it to your proxies, or any host on those networks can claim HTTPS.
 * the proxy sends `X-Forwarded-Proto: https`. Configure it to overwrite the header: if any listed protocol is not `https`, the request is treated as plain HTTP.
 
-Changing `org.apache.unomi.ip.trustedProxies` in `custom.system.properties` needs a restart. The setting does not apply to `X-Unomi-Peer` keys in <<_single_tenant_compatibility_mode,single-tenant compatibility mode>>, which keep their Unomi 3.0 behaviour, nor to merges Unomi runs itself outside an HTTP request.
+Changing `org.apache.unomi.ip.trustedProxies` in `custom.system.properties` needs a restart. The setting does not apply to `X-Unomi-Peer` keys in <<_v2_compatibility_mode,single-tenant compatibility mode>>, which keep their Unomi 3.0 behaviour, nor to merges Unomi runs itself outside an HTTP request.
 
 ==== Troubleshooting profile merges
 
