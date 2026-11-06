@@ -84,6 +84,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.*;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.fail;
@@ -117,6 +118,43 @@ public class HealthCheckIT extends BaseIT {
         } catch (Exception e) {
             LOGGER.error("Error while executing health check", e);
             fail("Error while executing health check" + e.getMessage());
+        }
+    }
+
+    @Test
+    public void testConcurrentHealthCheck() {
+        final int NB_THREADS = 10;
+        final int NB_ITERATIONS = 20;
+
+        ExecutorService executorService = null;
+        try {
+            executorService = Executors.newFixedThreadPool(NB_THREADS);
+            List<Future<List<HealthCheckResponse>>> futures = new ArrayList<>();
+            for (int i = 0; i < NB_ITERATIONS; i++) {
+                for (int j = 0; j < NB_THREADS; j++) {
+                    Future<List<HealthCheckResponse>> future = executorService.submit(() -> get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {}));
+                    futures.add(future);
+                }
+                for (Future<List<HealthCheckResponse>> future : futures) {
+                    List<HealthCheckResponse> health = future.get(10, TimeUnit.SECONDS);
+                    Assert.assertEquals(5, health.size());
+                    Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("karaf") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+                    Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("elasticsearch") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+                    Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("unomi") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+                    Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("cluster") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+                    Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("persistence") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+                }
+                Thread.sleep(10);
+            }
+            executorService.shutdown();
+            Assert.assertTrue(executorService.awaitTermination(10, TimeUnit.SECONDS));
+        } catch (Exception e) {
+            LOGGER.error("Error while executing concurrent health check", e);
+            fail("Error while executing concurrent health check: " + e.getMessage());
+        } finally {
+            if ( executorService != null ) {
+                executorService.shutdownNow();
+            }
         }
     }
 

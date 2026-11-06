@@ -22,6 +22,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.BasicCredentialsProvider;
@@ -107,7 +108,13 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
                         .concat("/_cluster/health");
         CloseableHttpResponse response = null;
         try {
-            response = httpClient.execute(new HttpGet(url));
+            HttpGet request = new HttpGet(url);
+            request.setConfig(RequestConfig.custom()
+                    .setConnectTimeout(config.getTimeout())
+                    .setConnectionRequestTimeout(config.getTimeout())
+                    .setSocketTimeout(config.getTimeout())
+                    .build());
+            response = httpClient.execute(request);
             if (response != null && response.getStatusLine().getStatusCode() == 200) {
                 builder.up();
                 HttpEntity entity = response.getEntity();
