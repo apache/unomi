@@ -146,32 +146,40 @@ public class GraphQLServletSecurityValidator {
             return false;
         }
 
-        // Prefer Authorization first so a Basic/admin call never pays for a public-operation parse.
-        if (req.getHeader("Authorization") != null) {
-            if (isAuthenticatedUser(req)) {
-                return true;
-            }
-            if (!sendTenantRejection(req, res)) {
-                res.addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
-                res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-            }
+        // Valid credentials are accepted first, so an admin call never pays for a public-operation parse.
+        boolean hasAuthorization = req.getHeader("Authorization") != null;
+        // A failed attempt leaves no subject behind: every refusal in authenticateBasic clears it.
+        if (hasAuthorization && isAuthenticatedUser(req)) {
+            return true;
+        }
+
+        // A stray or stale Basic header (a cached browser credential, an injecting proxy) must not turn
+        // a public API key call into a 401, as on the REST public endpoints.
+        if (isPublicApiKeyCall(query, operationName, req)) {
+            return true;
+        }
+
+        if (!hasAuthorization || !sendTenantRejection(req, res)) {
+            res.addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
+            res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        }
+        return false;
+    }
+
+    /** Sets the tenant context and returns {@code true} for a public operation with a valid public API key. */
+    private boolean isPublicApiKeyCall(String query, String operationName, HttpServletRequest req) {
+        String apiKey = req.getHeader("X-Unomi-Api-Key");
+        if (apiKey == null || !isPublicOperation(query, operationName)) {
             return false;
         }
-
-        String apiKey = req.getHeader("X-Unomi-Api-Key");
-        if (apiKey != null && isPublicOperation(query, operationName)) {
-            Tenant tenant = tenantService.getTenantByApiKey(apiKey, ApiKey.ApiKeyType.PUBLIC);
-            if (tenant != null) {
-                Subject subject = securityService.createSubject(tenant.getItemId(), false);
-                securityService.setCurrentSubject(subject);
-                executionContextManager.setCurrentContext(executionContextManager.createContext(tenant.getItemId()));
-                return true;
-            }
+        Tenant tenant = tenantService.getTenantByApiKey(apiKey, ApiKey.ApiKeyType.PUBLIC);
+        if (tenant == null) {
+            return false;
         }
-
-        res.addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
-        res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-        return false;
+        Subject subject = securityService.createSubject(tenant.getItemId(), false);
+        securityService.setCurrentSubject(subject);
+        executionContextManager.setCurrentContext(executionContextManager.createContext(tenant.getItemId()));
+        return true;
     }
 
     /**

@@ -478,6 +478,62 @@ class GraphQLServletSecurityValidatorTest {
         verify(tenantService, never()).getTenantByApiKey(eq("public-api-key"), eq(ApiKey.ApiKeyType.PUBLIC));
     }
 
+    /**
+     * A stray or stale Basic header (cached browser credential, injecting proxy) must not turn a valid
+     * public API key call into a 401: the public path is still tried, as on the REST public endpoints.
+     */
+    @Test
+    void validate_withFailingAuthorization_fallsBackToPublicApiKey() throws IOException {
+        Tenant tenant = new Tenant();
+        tenant.setItemId("pub-tenant");
+        when(request.getHeader("Authorization")).thenReturn("Basic not-valid-base64");
+        when(request.getHeader("X-Unomi-Api-Key")).thenReturn("public-api-key");
+        when(tenantService.getTenantByApiKey("public-api-key", ApiKey.ApiKeyType.PUBLIC)).thenReturn(tenant);
+        Subject publicSubject = new Subject();
+        when(securityService.createSubject("pub-tenant", false)).thenReturn(publicSubject);
+        ExecutionContext context = new ExecutionContext("pub-tenant", null, null);
+        when(executionContextManager.createContext("pub-tenant")).thenReturn(context);
+
+        boolean authenticated = validator.validate(
+                "query { cdp { getProfile(profileID:{id:\"x\"}) { id } } }", null, request, response);
+
+        assertTrue(authenticated);
+        verify(securityService).setCurrentSubject(publicSubject);
+        verify(executionContextManager).setCurrentContext(context);
+        verify(response, never()).sendError(anyInt());
+    }
+
+    /** The fallback only covers public operations: a privileged one with a failing Basic header stays 401. */
+    @Test
+    void validate_withFailingAuthorization_andPrivilegedOperation_isRejected() throws IOException {
+        when(request.getHeader("Authorization")).thenReturn("Basic not-valid-base64");
+        lenient().when(request.getHeader("X-Unomi-Api-Key")).thenReturn("public-api-key");
+
+        boolean authenticated = validator.validate(
+                "query { cdp { findProfiles(first:10) { edges { node { id } } } } }", null, request, response);
+
+        assertFalse(authenticated);
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        verify(securityService, never()).setCurrentSubject(any());
+        verify(tenantService, never()).getTenantByApiKey(anyString(), eq(ApiKey.ApiKeyType.PUBLIC));
+    }
+
+    /** A failing Basic header with an unknown public key is still a 401, never public access. */
+    @Test
+    void validate_withFailingAuthorization_andUnknownPublicKey_isRejected() throws IOException {
+        when(request.getHeader("Authorization")).thenReturn("Basic not-valid-base64");
+        when(request.getHeader("X-Unomi-Api-Key")).thenReturn("unknown-key");
+        when(tenantService.getTenantByApiKey("unknown-key", ApiKey.ApiKeyType.PUBLIC)).thenReturn(null);
+
+        boolean authenticated = validator.validate(
+                "query { cdp { getProfile(profileID:{id:\"x\"}) { id } } }", null, request, response);
+
+        assertFalse(authenticated);
+        verify(response).addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        verify(securityService, never()).setCurrentSubject(any());
+    }
+
     private void assertNotPublic(String query, String operationName) throws IOException {
         assertFalse(validator.validate(query, operationName, request, response),
                 "Expected document to be denied for a public API key: " + query);
