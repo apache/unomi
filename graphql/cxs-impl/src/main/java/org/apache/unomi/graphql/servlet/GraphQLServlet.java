@@ -327,14 +327,15 @@ public class GraphQLServlet extends WebSocketServlet {
                 variables = GraphQLObjectMapper.getInstance().readValue(variableStr, typeRef);
             }
 
-            // GET is easy for a browser to issue cross-origin without a preflight. Only queries.
-            if (!isReadOnlyOperation(query, operationName)) {
-                resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
-                        "GraphQL mutations and subscriptions are not allowed over HTTP GET");
+            // Authenticate (and apply the size limit) before parsing the document for the method check.
+            if (!validator.validate(query, operationName, req, resp)) {
                 return;
             }
-
-            if (!validator.validate(query, operationName, req, resp)) {
+            // GET is easy for a browser to issue cross-origin without a preflight. Only queries.
+            if (!isReadOnlyOperation(query, operationName)) {
+                resp.setHeader("Allow", "POST");
+                resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
+                        "GraphQL mutations and subscriptions are not allowed over HTTP GET");
                 return;
             }
             setupCORSHeaders(req, resp);
