@@ -772,7 +772,12 @@ org.apache.unomi.graphql.max.query.depth=${env:UNOMI_GRAPHQL_MAX_QUERY_DEPTH:-24
 org.apache.unomi.graphql.max.query.complexity=${env:UNOMI_GRAPHQL_MAX_QUERY_COMPLEXITY:-3000}
 ----
 
-The defaults leave GraphiQL introspection and the public `getProfile` / `processEvents` fields usable. Oversized requests are refused with HTTP 413 before the document is parsed. Depth and complexity changes take effect when the GraphQL schema is rebuilt (for example after a configuration update).
+The defaults leave GraphiQL introspection and the public `getProfile` / `processEvents` fields usable. Oversized requests are refused with HTTP 413 before the document is parsed. Changes to these settings apply to HTTP requests as soon as the configuration is updated.
+
+GraphQL subscriptions over WebSocket are handled differently:
+
+* They keep the depth and complexity limits in force when the GraphQL servlet started. Restart Unomi (or the GraphQL bundle) to apply new values to them.
+* The length and body size limits do not apply to them. A subscription message is limited to 1 MB by the WebSocket buffer, and a socket must authenticate before it can run anything.
 
 === Scripting security
 
