@@ -78,6 +78,12 @@
                         <goals>
                             <goal>yarn</goal>
                         </goals>
+                        <configuration>
+                            <!-- The tracker is a git dependency: its prepare script runs a nested yarn
+                                 install that shares the yarn cache, and parallel downloads into that
+                                 cache corrupt it on a cold CI cache. -->
+                            <arguments>install --frozen-lockfile --network-concurrency 1</arguments>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>yarn build</id>
