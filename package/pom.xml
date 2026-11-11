@@ -411,30 +411,26 @@
                 </configuration>
             </plugin>
 
-        <!-- Create a dummy JAR just for caching, this is a workaround to avoid Maven Build cache issues -->
+        <!-- Local-only dummy JAR for build tooling (historically Maven Build Cache). Written to
+             target/ but never attached, so install/deploy do not publish unomi-*-buildcache.jar
+             (UNOMI-1011). The jar plugin always attaches classified jars in 3.2.x. -->
             <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-jar-plugin</artifactId>
-            <executions>
-                <execution>
-                <id>create-dummy-jar</id>
-                <phase>package</phase>
-                <goals>
-                    <goal>jar</goal>
-                </goals>
-                <configuration>
-                    <!-- A classifier keeps this jar a side artifact. Without one, the jar plugin makes it
-                         the artifact of this pom-packaged module, which is what the blanket deploy skip
-                         below was added to hide, and that skip took the distribution with it. -->
-                    <classifier>buildcache</classifier>
-                    <archive>
-                    <manifest>
-                        <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                    </manifest>
-                    </archive>
-                </configuration>
-                </execution>
-            </executions>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>create-dummy-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <jar destfile="${project.build.directory}/${project.build.finalName}-buildcache.jar"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
         </plugins>
