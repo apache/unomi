@@ -28,6 +28,8 @@ import org.apache.unomi.api.tenants.AdminTenantSelection;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.graphql.limits.GraphQLLimitsConfig;
+import org.apache.unomi.graphql.limits.GraphQLRequestLimits;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,17 +71,26 @@ public class GraphQLServletSecurityValidator {
     private final SecurityService securityService;
     private final ExecutionContextManager executionContextManager;
     private final AdminTenantConfig adminTenantConfig;
+    private final GraphQLLimitsConfig limitsConfig;
 
     public GraphQLServletSecurityValidator(TenantService tenantService,
                                          SecurityService securityService,
                                          ExecutionContextManager executionContextManager) {
-        this(tenantService, securityService, executionContextManager, () -> AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID);
+        this(tenantService, securityService, executionContextManager, () -> AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID, null);
     }
 
     public GraphQLServletSecurityValidator(TenantService tenantService,
                                          SecurityService securityService,
                                          ExecutionContextManager executionContextManager,
                                          AdminTenantConfig adminTenantConfig) {
+        this(tenantService, securityService, executionContextManager, adminTenantConfig, null);
+    }
+
+    public GraphQLServletSecurityValidator(TenantService tenantService,
+                                         SecurityService securityService,
+                                         ExecutionContextManager executionContextManager,
+                                         AdminTenantConfig adminTenantConfig,
+                                         GraphQLLimitsConfig limitsConfig) {
         this.parser = new Parser();
         this.tenantService = tenantService;
         this.securityService = securityService;
@@ -87,6 +98,7 @@ public class GraphQLServletSecurityValidator {
         this.adminTenantConfig = adminTenantConfig != null
                 ? adminTenantConfig
                 : () -> AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID;
+        this.limitsConfig = limitsConfig;
     }
 
     /**
@@ -129,35 +141,37 @@ public class GraphQLServletSecurityValidator {
         // subject left behind by earlier work on this thread can never make this request trusted.
         securityService.clearCurrentSubject();
 
-        if (isPublicOperation(query, operationName)) {
-            // For public operations, check API key
-            String apiKey = req.getHeader("X-Unomi-Api-Key");
-            if (apiKey != null) {
-                Tenant tenant = tenantService.getTenantByApiKey(apiKey, ApiKey.ApiKeyType.PUBLIC);
-                if (tenant != null) {
-                    // Set the security context for public API key
-                    Subject subject = securityService.createSubject(tenant.getItemId(), false);
-                    securityService.setCurrentSubject(subject);
-                    executionContextManager.setCurrentContext(executionContextManager.createContext(tenant.getItemId()));
-                    return true;
-                }
-            }
-        }
-
-        if (req.getHeader("Authorization") == null) {
-            res.addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
-            res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        // Refuse oversized documents before any parse (including the public-operation classifier).
+        if (!GraphQLRequestLimits.checkQueryLength(query, limitsConfig, res)) {
             return false;
         }
 
-        if (isAuthenticatedUser(req)) {
-            return true;
-        } else {
+        // Prefer Authorization first so a Basic/admin call never pays for a public-operation parse.
+        if (req.getHeader("Authorization") != null) {
+            if (isAuthenticatedUser(req)) {
+                return true;
+            }
             if (!sendTenantRejection(req, res)) {
+                res.addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
                 res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             }
             return false;
         }
+
+        String apiKey = req.getHeader("X-Unomi-Api-Key");
+        if (apiKey != null && isPublicOperation(query, operationName)) {
+            Tenant tenant = tenantService.getTenantByApiKey(apiKey, ApiKey.ApiKeyType.PUBLIC);
+            if (tenant != null) {
+                Subject subject = securityService.createSubject(tenant.getItemId(), false);
+                securityService.setCurrentSubject(subject);
+                executionContextManager.setCurrentContext(executionContextManager.createContext(tenant.getItemId()));
+                return true;
+            }
+        }
+
+        res.addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
+        res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        return false;
     }
 
     /**

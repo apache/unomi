@@ -25,6 +25,7 @@ import org.apache.unomi.api.tenants.AdminTenantConfig;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.graphql.limits.GraphQLLimitsConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -84,6 +85,8 @@ class GraphQLServletSecurityValidatorTest {
     private HttpServletRequest request;
     @Mock
     private HttpServletResponse response;
+    @Mock
+    private GraphQLLimitsConfig limitsConfig;
 
     private GraphQLServletSecurityValidator validator;
 
@@ -91,9 +94,10 @@ class GraphQLServletSecurityValidatorTest {
     void setUp() {
         previousConfiguration = Configuration.getConfiguration();
         Configuration.setConfiguration(new AlwaysSucceedingKarafConfiguration());
+        lenient().when(limitsConfig.getMaxQueryLengthChars()).thenReturn(262144);
         validator = new GraphQLServletSecurityValidator(
                 tenantService, securityService, executionContextManager,
-                () -> AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID);
+                () -> AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID, limitsConfig);
         // Back request attributes with a map, as a servlet container does.
         Map<String, Object> attributes = new HashMap<>();
         lenient().doAnswer(invocation -> attributes.put(invocation.getArgument(0), invocation.getArgument(1)))
@@ -429,6 +433,7 @@ class GraphQLServletSecurityValidatorTest {
     void validate_legitimatePublicOperation_isAuthenticatedWithPublicApiKey() throws IOException {
         Tenant tenant = new Tenant();
         tenant.setItemId("pub-tenant");
+        when(request.getHeader("Authorization")).thenReturn(null);
         when(request.getHeader("X-Unomi-Api-Key")).thenReturn("public-api-key");
         when(tenantService.getTenantByApiKey("public-api-key", ApiKey.ApiKeyType.PUBLIC)).thenReturn(tenant);
         when(securityService.createSubject("pub-tenant", false)).thenReturn(new Subject());
@@ -440,6 +445,37 @@ class GraphQLServletSecurityValidatorTest {
 
         assertTrue(authenticated);
         verify(executionContextManager).setCurrentContext(context);
+    }
+
+    @Test
+    void validate_rejectsOversizedQueryBeforeAuth() throws IOException {
+        when(limitsConfig.getMaxQueryLengthChars()).thenReturn(16);
+
+        boolean authenticated = validator.validate(
+                "query { cdp { getProfile(profileID:{id:\"x\"}) { id } } }", null, request, response);
+
+        assertFalse(authenticated);
+        verify(response).sendError(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE,
+                "GraphQL query exceeds the configured size limit");
+        verify(securityService, never()).setCurrentSubject(any());
+        verify(request, never()).getHeader("Authorization");
+        verify(tenantService, never()).getTenantByApiKey(anyString(), any());
+    }
+
+    @Test
+    void validate_withAuthorization_doesNotTryPublicApiKey() throws IOException {
+        givenAdministratorRole();
+        givenDefaultTenant();
+        when(securityService.hasSystemAccess()).thenReturn(true);
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
+        when(tenantService.getTenantByApiKey(any(), eq(ApiKey.ApiKeyType.PRIVATE))).thenReturn(null);
+        lenient().when(request.getHeader("X-Unomi-Api-Key")).thenReturn("public-api-key");
+
+        boolean authenticated = validator.validate(
+                "query { cdp { getProfile(profileID:{id:\"x\"}) { id } } }", null, request, response);
+
+        assertTrue(authenticated);
+        verify(tenantService, never()).getTenantByApiKey(eq("public-api-key"), eq(ApiKey.ApiKeyType.PUBLIC));
     }
 
     private void assertNotPublic(String query, String operationName) throws IOException {

@@ -53,6 +53,7 @@
         <bundle start="false">mvn:org.eclipse.jetty.websocket/websocket-client/${jetty.version}</bundle>
         <!-- jetty-util-ajax is not used by GraphQL WebSocket implementation -->
         <!-- ${servlet.spec.groupId}/${servlet.spec.artifactId} (servlet-api) is already provided by war feature (via Pax Web) in unomi-base, no need to redeclare -->
+        <configfile finalname="/etc/org.apache.unomi.graphql.cfg">mvn:org.apache.unomi/cdp-graphql-api-impl/${project.version}/cfg/unomicfg</configfile>
         <bundle start="false">mvn:org.apache.unomi/cdp-graphql-api-impl/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-graphql-ui/${project.version}</bundle>
     </feature>

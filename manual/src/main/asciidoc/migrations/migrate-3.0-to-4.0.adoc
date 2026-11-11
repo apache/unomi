@@ -467,6 +467,9 @@ In addition to tenant API keys, Unomi 4.0 hardens several contracts that can bre
 |Admin REST and GraphQL answered any origin with credentialed CORS, so a page on another site could reuse the operator's browser credentials to read admin responses.
 |Only origins listed in `org.apache.unomi.admin.cors.allowedOrigins` (`UNOMI_ADMIN_CORS_ALLOWED_ORIGINS`) get credentialed CORS on admin REST and GraphQL. The default is empty. A same-origin admin UI needs no change. See <<_admin_cors_origins,Admin UI origins>>.
 
+|GraphQL documents had no server-side size, depth, or complexity bound beyond container limits.
+|GraphQL under `/graphql` applies configurable length, body size, depth, and complexity limits (`org.apache.unomi.graphql.*`). Defaults leave GraphiQL introspection and the public `getProfile` / `processEvents` fields usable. See <<_graphql_query_limits,GraphQL query limits>>.
+
 |Profile cookie `HttpOnly`
 |Often defaulted to `false` (JS could read `document.cookie`)
 |Default **`true`**. Prefer `profileId` from the JSON response. Opt out with `org.apache.unomi.profile.cookie.httpOnly=false` only if you accept the tradeoff.
