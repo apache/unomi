@@ -632,6 +632,8 @@ org.apache.unomi.admin.cors.allowedOrigins=${env:UNOMI_ADMIN_CORS_ALLOWED_ORIGIN
 
 Example: `https://admin.example.com`. Same-origin deployments (a reverse proxy serving the UI and Unomi together) need no entry. This list is separate from `org.apache.unomi.public.cors.allowedOrigins`, which only covers the visitor cookie on public tracker endpoints.
 
+This list covers HTTP requests only. GraphQL subscriptions over WebSocket accept only handshakes from the same host as Unomi (or with no `Origin`), whether or not the origin is listed here.
+
 Example:
 
 [source,bash]

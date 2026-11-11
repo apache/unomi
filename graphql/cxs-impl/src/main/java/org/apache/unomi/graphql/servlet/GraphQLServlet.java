@@ -78,7 +78,9 @@ public class GraphQLServlet extends WebSocketServlet {
         this.serviceManager = serviceManager;
     }
 
-    @Reference(cardinality = org.osgi.service.component.annotations.ReferenceCardinality.OPTIONAL)
+    // Mandatory: an optional static reference is never bound if the rest bundle registers it later,
+    // which would silently refuse every listed admin origin.
+    @Reference
     public void setAdminCorsService(AdminCorsService adminCorsService) {
         this.adminCorsService = adminCorsService;
     }
