@@ -647,6 +647,8 @@ org.apache.unomi.graphql.max.query.complexity=${env:UNOMI_GRAPHQL_MAX_QUERY_COMP
 
 The defaults leave GraphiQL introspection and the public `getProfile` / `processEvents` fields usable. Oversized requests are refused with HTTP 413 before the document is parsed. Depth and complexity changes take effect when the GraphQL schema is rebuilt (for example after a configuration update).
 
+HTTP GET may run query operations only. Mutations and subscriptions must use HTTP POST with `Content-Type: application/json` (a charset parameter is fine).
+
 Example:
 
 [source,bash]

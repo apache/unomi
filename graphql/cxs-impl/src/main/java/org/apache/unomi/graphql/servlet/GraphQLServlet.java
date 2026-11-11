@@ -21,6 +21,9 @@ import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.introspection.IntrospectionQuery;
+import graphql.language.Document;
+import graphql.language.OperationDefinition;
+import graphql.parser.Parser;
 import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.AdminCorsService;
@@ -51,6 +54,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Component(service = GraphQLServlet.class)
@@ -320,6 +325,13 @@ public class GraphQLServlet extends WebSocketServlet {
                 variables = GraphQLObjectMapper.getInstance().readValue(variableStr, typeRef);
             }
 
+            // GET is easy for a browser to issue cross-origin without a preflight. Only queries.
+            if (!isReadOnlyOperation(query, operationName)) {
+                resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
+                        "GraphQL mutations and subscriptions are not allowed over HTTP GET");
+                return;
+            }
+
             if (!validator.validate(query, operationName, req, resp)) {
                 return;
             }
@@ -335,6 +347,13 @@ public class GraphQLServlet extends WebSocketServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         LOGGER.debug("GraphQLServlet doPost called with request: {}", req.getRequestURI());
         try {
+            // Require JSON so a simple cross-site form post cannot change state.
+            final String contentType = req.getContentType();
+            if (contentType == null || !contentType.toLowerCase(Locale.ROOT).startsWith("application/json")) {
+                resp.sendError(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE,
+                        "GraphQL requests must use the application/json content type");
+                return;
+            }
             if (!GraphQLRequestLimits.checkContentLength(req.getContentLength(), limitsConfig, resp)) {
                 return;
             }
@@ -369,6 +388,35 @@ public class GraphQLServlet extends WebSocketServlet {
             resp.flushBuffer();
         } finally {
             cleanupSecurityContext();
+        }
+    }
+
+    /**
+     * Whether the operation that would run for this document is a query. Mutations, subscriptions,
+     * and documents that cannot be parsed are treated as non-read-only.
+     */
+    static boolean isReadOnlyOperation(final String query, final String operationName) {
+        if (query == null || query.trim().length() == 0) {
+            return true;
+        }
+        try {
+            final Document document = new Parser().parseDocument(query);
+            final List<OperationDefinition> operations = document.getDefinitionsOfType(OperationDefinition.class);
+            OperationDefinition operationToExecute = null;
+            if (operationName != null && operationName.trim().length() > 0) {
+                for (OperationDefinition operation : operations) {
+                    if (operationName.equals(operation.getName())) {
+                        operationToExecute = operation;
+                        break;
+                    }
+                }
+            } else if (!operations.isEmpty()) {
+                operationToExecute = operations.get(0);
+            }
+            return operationToExecute == null
+                    || OperationDefinition.Operation.QUERY.equals(operationToExecute.getOperation());
+        } catch (Exception e) {
+            return false;
         }
     }
 
