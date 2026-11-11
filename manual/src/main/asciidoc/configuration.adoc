@@ -618,35 +618,6 @@ org.apache.unomi.public.cors.matchReferer=${env:UNOMI_PUBLIC_CORS_MATCH_REFERER:
 org.apache.unomi.public.cors.tenantOrigins=${env:UNOMI_PUBLIC_CORS_TENANT_ORIGINS:-true}
 ----
 
-[[_admin_cors_origins]]
-==== Admin UI origins (credentialed CORS)
-
-The admin REST API under `/cxs` (other than the public tracker endpoints above) and GraphQL under `/graphql` do not advertise credentialed CORS by default. A browser on another origin therefore cannot read admin responses using the operator's HTTP Basic credentials.
-
-If an admin UI is served from a different origin than Unomi, list that origin:
-
-[source]
-----
-org.apache.unomi.admin.cors.allowedOrigins=${env:UNOMI_ADMIN_CORS_ALLOWED_ORIGINS:-}
-----
-
-Example: `https://admin.example.com`. Same-origin deployments (a reverse proxy serving the UI and Unomi together) need no entry. This list is separate from `org.apache.unomi.public.cors.allowedOrigins`, which only covers the visitor cookie on public tracker endpoints.
-
-[[_graphql_query_limits]]
-==== GraphQL query limits
-
-GraphQL under `/graphql` bounds document size and analysis cost. Configure them in `etc/custom.system.properties` (or the matching environment variables); they are applied through `etc/org.apache.unomi.graphql.cfg`. A value of `0` turns that check off.
-
-[source]
-----
-org.apache.unomi.graphql.max.query.length.chars=${env:UNOMI_GRAPHQL_MAX_QUERY_LENGTH_CHARS:-262144}
-org.apache.unomi.graphql.max.request.body.bytes=${env:UNOMI_GRAPHQL_MAX_REQUEST_BODY_BYTES:-524288}
-org.apache.unomi.graphql.max.query.depth=${env:UNOMI_GRAPHQL_MAX_QUERY_DEPTH:-24}
-org.apache.unomi.graphql.max.query.complexity=${env:UNOMI_GRAPHQL_MAX_QUERY_COMPLEXITY:-3000}
-----
-
-The defaults leave GraphiQL introspection and the public `getProfile` / `processEvents` fields usable. Oversized requests are refused with HTTP 413 before the document is parsed. Depth and complexity changes take effect when the GraphQL schema is rebuilt (for example after a configuration update).
-
 Example:
 
 [source,bash]
@@ -771,6 +742,37 @@ Other behaviour that changed:
 ===== Tracker without cookies
 
 A deployment that does not need the visitor cookie can set `sendCredentials: false` in the tracker's `wemInitConfig` (tracker 2.0.0 or later, see <<_unomi_web_tracker_reference,the web tracker>>). Requests are then sent without cookies and work with the default settings, but each request starts a new anonymous profile.
+
+[[_admin_cors_origins]]
+==== Admin UI origins (credentialed CORS)
+
+The admin REST API under `/cxs` (other than the public tracker endpoints above) and GraphQL under `/graphql` do not advertise credentialed CORS by default. A browser on another origin therefore cannot read admin responses using the operator's HTTP Basic credentials.
+
+If an admin UI is served from a different origin than Unomi, list that origin:
+
+[source]
+----
+org.apache.unomi.admin.cors.allowedOrigins=${env:UNOMI_ADMIN_CORS_ALLOWED_ORIGINS:-}
+----
+
+Example: `https://admin.example.com`. Same-origin deployments (a reverse proxy serving the UI and Unomi together) need no entry. This list is separate from `org.apache.unomi.public.cors.allowedOrigins`, which only covers the visitor cookie on public tracker endpoints.
+
+This list covers HTTP requests only. GraphQL subscriptions over WebSocket accept only handshakes from the same host as Unomi (or with no `Origin`), whether or not the origin is listed here.
+
+[[_graphql_query_limits]]
+==== GraphQL query limits
+
+GraphQL under `/graphql` bounds document size and analysis cost. Configure them in `etc/custom.system.properties` (or the matching environment variables); they are applied through `etc/org.apache.unomi.graphql.cfg`. A value of `0` turns that check off.
+
+[source]
+----
+org.apache.unomi.graphql.max.query.length.chars=${env:UNOMI_GRAPHQL_MAX_QUERY_LENGTH_CHARS:-262144}
+org.apache.unomi.graphql.max.request.body.bytes=${env:UNOMI_GRAPHQL_MAX_REQUEST_BODY_BYTES:-524288}
+org.apache.unomi.graphql.max.query.depth=${env:UNOMI_GRAPHQL_MAX_QUERY_DEPTH:-24}
+org.apache.unomi.graphql.max.query.complexity=${env:UNOMI_GRAPHQL_MAX_QUERY_COMPLEXITY:-3000}
+----
+
+The defaults leave GraphiQL introspection and the public `getProfile` / `processEvents` fields usable. Oversized requests are refused with HTTP 413 before the document is parsed. Depth and complexity changes take effect when the GraphQL schema is rebuilt (for example after a configuration update).
 
 === Scripting security
 
