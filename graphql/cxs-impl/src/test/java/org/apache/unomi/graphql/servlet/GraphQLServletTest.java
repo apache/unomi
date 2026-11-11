@@ -383,9 +383,10 @@ class GraphQLServletTest {
     /** A real graphql-java instance behind the schema updater: queries answer "pong", the mutation "touched". */
     private StringWriter givenExecutableSchema() throws IOException {
         GraphQL graphQL = GraphQL.newGraphQL(new SchemaGenerator().makeExecutableSchema(
-                new SchemaParser().parse("type Query { ping: String } type Mutation { touch: String }"),
+                new SchemaParser().parse("type Query { ping: String, profile(createIfMissing: Boolean): String }"
+                        + " type Mutation { touch: String }"),
                 RuntimeWiring.newRuntimeWiring()
-                        .type("Query", t -> t.dataFetcher("ping", env -> "pong"))
+                        .type("Query", t -> t.dataFetcher("ping", env -> "pong").dataFetcher("profile", env -> "loaded"))
                         .type("Mutation", t -> t.dataFetcher("touch", env -> "touched"))
                         .build())).build();
         GraphQLSchemaUpdater updater = mock(GraphQLSchemaUpdater.class);
@@ -455,6 +456,50 @@ class GraphQLServletTest {
         verify(validator).validate(eq(MUTATION), isNull(), eq(request), eq(response));
         verify(response, never()).sendError(eq(HttpServletResponse.SC_METHOD_NOT_ALLOWED), anyString());
         verify(response, never()).setHeader(eq("Allow"), anyString());
+    }
+
+    /** getProfile(createIfMissing: true) saves a profile: refused over GET like a mutation, never executed. */
+    @Test
+    void doGet_createIfMissingTrue_is405AndNeverRuns() throws Exception {
+        GraphQLSchemaUpdater updater = mock(GraphQLSchemaUpdater.class);
+        servlet.setGraphQLSchemaUpdater(updater);
+        String query = "{ profile(createIfMissing: true) }";
+        givenGet(query);
+        when(validator.validate(eq(query), isNull(), eq(request), eq(response))).thenReturn(true);
+
+        servlet.doGet(request, response);
+
+        verify(response).setHeader("Allow", "POST");
+        verify(response).sendError(eq(HttpServletResponse.SC_METHOD_NOT_ALLOWED), anyString());
+        verifyNoInteractions(updater);
+    }
+
+    /** The same through a GET variables parameter. */
+    @Test
+    void doGet_createIfMissingTrueThroughVariables_is405() throws Exception {
+        String query = "query q($c: Boolean) { profile(createIfMissing: $c) }";
+        givenGet(query);
+        when(request.getParameter("operationName")).thenReturn(null);
+        when(request.getParameter("variables")).thenReturn("{\"c\": true}");
+        when(validator.validate(eq(query), isNull(), eq(request), eq(response))).thenReturn(true);
+
+        servlet.doGet(request, response);
+
+        verify(response).sendError(eq(HttpServletResponse.SC_METHOD_NOT_ALLOWED), anyString());
+    }
+
+    /** Reading a profile without creating it still works over GET. */
+    @Test
+    void doGet_createIfMissingFalse_runs() throws Exception {
+        StringWriter out = givenExecutableSchema();
+        String query = "{ profile(createIfMissing: false) }";
+        givenGet(query);
+        when(validator.validate(eq(query), isNull(), eq(request), eq(response))).thenReturn(true);
+
+        servlet.doGet(request, response);
+
+        assertTrue(out.toString().contains("loaded"), out.toString());
+        verify(response, never()).sendError(eq(HttpServletResponse.SC_METHOD_NOT_ALLOWED), anyString());
     }
 
     /** A cross-site form can post text/plain without a preflight: refused before the body is read. */

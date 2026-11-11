@@ -19,6 +19,9 @@ package org.apache.unomi.graphql.servlet;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -65,5 +68,52 @@ class GraphQLServletReadOnlyOperationTest {
     void allowsEmptyQueryToFailDownstream() {
         assertTrue(GraphQLServlet.isReadOnlyOperation(null, null));
         assertTrue(GraphQLServlet.isReadOnlyOperation("   ", null));
+    }
+
+    // getProfile(createIfMissing: true) saves a profile, so a query setting it is not read-only.
+
+    private static final String CREATE = "query { cdp { getProfile(profileID: {id: \"x\"}, createIfMissing: true) { id } } }";
+
+    @Test
+    void refusesCreateIfMissingLiteralTrue() {
+        assertFalse(GraphQLServlet.isReadOnlyOperation(CREATE, null));
+    }
+
+    @Test
+    void allowsCreateIfMissingFalseOrAbsent() {
+        assertTrue(GraphQLServlet.isReadOnlyOperation(CREATE.replace("true", "false"), null));
+        assertTrue(GraphQLServlet.isReadOnlyOperation(
+                "query { cdp { getProfile(profileID: {id: \"x\"}, createIfMissing: null) { id } } }", null));
+        assertTrue(GraphQLServlet.isReadOnlyOperation("query { cdp { getProfile(profileID: {id: \"x\"}) { id } } }", null));
+    }
+
+    @Test
+    void refusesCreateIfMissingThroughVariable() {
+        final String document = "query q($c: Boolean) { cdp { getProfile(profileID: {id: \"x\"}, createIfMissing: $c) { id } } }";
+        assertFalse(GraphQLServlet.isReadOnlyOperation(document, null, Map.of("c", true)));
+        assertTrue(GraphQLServlet.isReadOnlyOperation(document, null, Map.of("c", false)));
+        assertTrue(GraphQLServlet.isReadOnlyOperation(document, null, Collections.emptyMap()));
+    }
+
+    @Test
+    void refusesCreateIfMissingThroughVariableDefault() {
+        final String document = "query q($c: Boolean = true) { cdp { getProfile(profileID: {id: \"x\"}, createIfMissing: $c) { id } } }";
+        assertFalse(GraphQLServlet.isReadOnlyOperation(document, null, Collections.emptyMap()));
+        assertTrue(GraphQLServlet.isReadOnlyOperation(document, null, Map.of("c", false)));
+    }
+
+    @Test
+    void refusesCreateIfMissingInsideFragments() {
+        assertFalse(GraphQLServlet.isReadOnlyOperation(
+                "query { cdp { ...p } } fragment p on CDP_Query { getProfile(profileID: {id: \"x\"}, createIfMissing: true) { id } }",
+                null));
+        assertFalse(GraphQLServlet.isReadOnlyOperation(
+                "query { cdp { ... on CDP_Query { getProfile(profileID: {id: \"x\"}, createIfMissing: true) { id } } } }", null));
+    }
+
+    @Test
+    void cyclicFragmentsDoNotLoop() {
+        assertTrue(GraphQLServlet.isReadOnlyOperation(
+                "query { cdp { ...a } } fragment a on CDP_Query { ...b } fragment b on CDP_Query { ...a }", null));
     }
 }
