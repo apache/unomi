@@ -345,14 +345,15 @@ public class GraphQLSchemaUpdater {
     private GraphQL buildGraphQL(GraphQLSchema graphQLSchema) {
         GraphQL.Builder builder = GraphQL.newGraphQL(graphQLSchema)
                 .subscriptionExecutionStrategy(new SubscriptionExecutionStrategy());
-        Instrumentation instrumentation = buildInstrumentation();
+        Instrumentation instrumentation = buildInstrumentation(limitsConfig);
         if (instrumentation != null) {
             builder.instrumentation(instrumentation);
         }
         return builder.build();
     }
 
-    private Instrumentation buildInstrumentation() {
+    /** Depth and complexity limits, or {@code null} when none apply. Package-private for tests. */
+    static Instrumentation buildInstrumentation(GraphQLLimitsConfig limitsConfig) {
         if (limitsConfig == null) {
             return null;
         }

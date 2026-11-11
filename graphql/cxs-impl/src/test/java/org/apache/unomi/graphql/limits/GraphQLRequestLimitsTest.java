@@ -22,9 +22,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -81,6 +86,7 @@ class GraphQLRequestLimitsTest {
                 "GraphQL request body exceeds the configured size limit");
     }
 
+    /** No declared length to refuse early; {@link GraphQLRequestLimits#boundedBody} caps such a body. */
     @Test
     void checkContentLength_skipsWhenContentLengthUnknown() throws IOException {
         when(limits.getMaxRequestBodyBytes()).thenReturn(100);
@@ -88,5 +94,45 @@ class GraphQLRequestLimitsTest {
         assertTrue(GraphQLRequestLimits.checkContentLength(-1, limits, response));
         verify(response, never()).sendError(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE,
                 "GraphQL request body exceeds the configured size limit");
+    }
+
+    /** A body within the limit reads through unchanged. */
+    @Test
+    void boundedBody_readsBodyWithinLimit() throws IOException {
+        when(limits.getMaxRequestBodyBytes()).thenReturn(10);
+        byte[] body = "0123456789".getBytes();
+
+        InputStream in = GraphQLRequestLimits.boundedBody(new ByteArrayInputStream(body), limits);
+
+        assertArrayEquals(body, in.readAllBytes());
+    }
+
+    /** A body without Content-Length (chunked) is still capped while it is read. */
+    @Test
+    void boundedBody_failsOnceOverLimit() {
+        when(limits.getMaxRequestBodyBytes()).thenReturn(10);
+        InputStream in = GraphQLRequestLimits.boundedBody(new ByteArrayInputStream(new byte[11]), limits);
+
+        assertThrows(GraphQLRequestLimits.BodyTooLargeException.class, in::readAllBytes);
+    }
+
+    /** Single-byte reads are counted too. */
+    @Test
+    void boundedBody_countsSingleByteReads() throws IOException {
+        when(limits.getMaxRequestBodyBytes()).thenReturn(2);
+        InputStream in = GraphQLRequestLimits.boundedBody(new ByteArrayInputStream(new byte[3]), limits);
+
+        in.read();
+        in.read();
+        assertThrows(GraphQLRequestLimits.BodyTooLargeException.class, in::read);
+    }
+
+    @Test
+    void boundedBody_unwrappedWhenDisabledOrMissing() {
+        InputStream raw = new ByteArrayInputStream(new byte[0]);
+        assertSame(raw, GraphQLRequestLimits.boundedBody(raw, null));
+
+        when(limits.getMaxRequestBodyBytes()).thenReturn(0);
+        assertSame(raw, GraphQLRequestLimits.boundedBody(raw, limits));
     }
 }

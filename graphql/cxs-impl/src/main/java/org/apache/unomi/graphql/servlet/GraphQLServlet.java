@@ -87,7 +87,9 @@ public class GraphQLServlet extends WebSocketServlet {
         this.serviceManager = serviceManager;
     }
 
-    @Reference(cardinality = org.osgi.service.component.annotations.ReferenceCardinality.OPTIONAL)
+    // Mandatory: an optional static reference is never bound if the rest bundle registers it later,
+    // which would silently refuse every listed admin origin.
+    @Reference
     public void setAdminCorsService(AdminCorsService adminCorsService) {
         this.adminCorsService = adminCorsService;
     }
@@ -359,8 +361,18 @@ public class GraphQLServlet extends WebSocketServlet {
             }
             TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {
             };
-            Map<String, Object> body = GraphQLObjectMapper.getInstance().readValue(req.getInputStream(), typeRef);
-
+            Map<String, Object> body;
+            try {
+                // Capped while read: a chunked body declares no Content-Length for the check above.
+                body = GraphQLObjectMapper.getInstance().readValue(
+                        GraphQLRequestLimits.boundedBody(req.getInputStream(), limitsConfig), typeRef);
+            } catch (IOException e) {
+                if (!isBodyTooLarge(e)) {
+                    throw e;
+                }
+                GraphQLRequestLimits.sendBodyTooLarge(resp);
+                return;
+            }
 
             String query = (String) body.get("query");
             String operationName = (String) body.get("operationName");
@@ -450,6 +462,16 @@ public class GraphQLServlet extends WebSocketServlet {
         final Map<String, Object> specificationResult = executionResult.toSpecification();
 
         GraphQLObjectMapper.getInstance().writeValue(resp.getWriter(), specificationResult);
+    }
+
+    /** Jackson may wrap the stream's exception, so look along the cause chain. */
+    private static boolean isBodyTooLarge(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof GraphQLRequestLimits.BodyTooLargeException) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void setupCORSHeaders(HttpServletRequest httpServletRequest, ServletResponse response) {

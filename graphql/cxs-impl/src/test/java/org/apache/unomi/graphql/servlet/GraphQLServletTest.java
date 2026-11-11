@@ -19,6 +19,7 @@ package org.apache.unomi.graphql.servlet;
 
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.ExecutionContextManager;
+import org.apache.unomi.graphql.limits.GraphQLLimitsConfig;
 import org.apache.unomi.graphql.servlet.auth.GraphQLServletSecurityValidator;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
 import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
@@ -30,10 +31,14 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import javax.servlet.ReadListener;
 import javax.servlet.ServletException;
+import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -45,6 +50,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -256,6 +263,144 @@ class GraphQLServletTest {
     /**
      * Overrides HTTP fall-through so tests can assert upgrade failures never reach it.
      */
+    /** A listed admin UI origin gets credentialed CORS, named explicitly and varying on Origin. */
+    @Test
+    void cors_listedOrigin_getsCredentials() throws Exception {
+        servlet.setAdminCorsService("https://admin.example"::equals);
+        when(request.getHeader("Origin")).thenReturn("https://admin.example");
+
+        servlet.doOptions(request, response);
+
+        verify(response).setHeader("Access-Control-Allow-Origin", "https://admin.example");
+        verify(response).setHeader("Access-Control-Allow-Credentials", "true");
+        verify(response).setHeader(eq("Access-Control-Allow-Headers"), contains("Authorization"));
+        verify(response).addHeader("Vary", "Origin");
+    }
+
+    /** An unlisted origin gets no CORS grant at all: the browser then refuses to expose the response. */
+    @Test
+    void cors_unlistedOrigin_getsNoCorsHeaders() throws Exception {
+        servlet.setAdminCorsService("https://admin.example"::equals);
+        when(request.getHeader("Origin")).thenReturn("https://evil.example.com");
+
+        servlet.doOptions(request, response);
+
+        verify(response, never()).setHeader(anyString(), anyString());
+        verify(response, never()).addHeader(anyString(), anyString());
+    }
+
+    /** No Origin (same-origin GET or a non-browser client): no CORS headers are needed. */
+    @Test
+    void cors_noOrigin_getsNoCorsHeaders() throws Exception {
+        servlet.setAdminCorsService(origin -> true);
+        when(request.getHeader("Origin")).thenReturn(null);
+
+        servlet.doOptions(request, response);
+
+        verify(response, never()).setHeader(anyString(), anyString());
+        verify(response, never()).addHeader(anyString(), anyString());
+    }
+
+    /** Before 4.0 any origin was echoed with credentials; the default empty list must no longer do that. */
+    @Test
+    void cors_emptyList_neverEchoesOrigin() throws Exception {
+        servlet.setAdminCorsService(origin -> false);
+        when(request.getHeader("Origin")).thenReturn("https://admin.example");
+
+        servlet.doOptions(request, response);
+
+        verify(response, never()).setHeader(eq("Access-Control-Allow-Origin"), anyString());
+        verify(response, never()).setHeader(eq("Access-Control-Allow-Credentials"), anyString());
+    }
+
+    private GraphQLLimitsConfig bodyLimit(int maxBytes) {
+        GraphQLLimitsConfig limits = mock(GraphQLLimitsConfig.class);
+        when(limits.getMaxRequestBodyBytes()).thenReturn(maxBytes);
+        return limits;
+    }
+
+    /** A declared Content-Length over the limit is refused before the body is read. */
+    @Test
+    void doPost_declaredOversizedBody_is413WithoutReading() throws Exception {
+        servlet.setLimitsConfig(bodyLimit(100));
+        when(request.getContentLength()).thenReturn(101);
+
+        servlet.doPost(request, response);
+
+        verify(response).sendError(eq(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE), anyString());
+        verify(request, never()).getInputStream();
+        verifyNoInteractions(validator);
+    }
+
+    /**
+     * A chunked body declares no Content-Length; it is still refused once it goes over the limit, without
+     * reading the rest of it and before authentication.
+     */
+    @Test
+    void doPost_chunkedOversizedBody_is413AndStopsReading() throws Exception {
+        servlet.setLimitsConfig(bodyLimit(1024));
+        when(request.getContentLength()).thenReturn(-1);
+        byte[] body = ("{\"query\":\"" + "a".repeat(1024 * 1024) + "\"}").getBytes(StandardCharsets.UTF_8);
+        BodyStream stream = new BodyStream(body);
+        when(request.getInputStream()).thenReturn(stream);
+
+        servlet.doPost(request, response);
+
+        verify(response).sendError(eq(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE), anyString());
+        verifyNoInteractions(validator);
+        assertTrue(stream.remaining() > body.length / 2, "the body must not be read to the end");
+    }
+
+    /** A chunked body within the limit is parsed and handed to authentication as before. */
+    @Test
+    void doPost_chunkedBodyWithinLimit_reachesValidator() throws Exception {
+        servlet.setLimitsConfig(bodyLimit(1024));
+        when(request.getContentLength()).thenReturn(-1);
+        when(request.getInputStream()).thenReturn(
+                new BodyStream("{\"query\":\"{ __typename }\"}".getBytes(StandardCharsets.UTF_8)));
+        when(validator.validate(eq("{ __typename }"), isNull(), eq(request), eq(response))).thenReturn(false);
+
+        servlet.doPost(request, response);
+
+        verify(validator).validate(eq("{ __typename }"), isNull(), eq(request), eq(response));
+        verify(response, never()).sendError(eq(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE), anyString());
+    }
+
+    /** A request body as the container hands it over. */
+    private static final class BodyStream extends ServletInputStream {
+        private final ByteArrayInputStream in;
+
+        BodyStream(byte[] body) {
+            this.in = new ByteArrayInputStream(body);
+        }
+
+        int remaining() {
+            return in.available();
+        }
+
+        @Override
+        public int read() {
+            return in.read();
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) {
+            return in.read(b, off, len);
+        }
+
+        public boolean isFinished() {
+            return in.available() == 0;
+        }
+
+        public boolean isReady() {
+            return true;
+        }
+
+        public void setReadListener(ReadListener readListener) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
     private static final class TrackingGraphQLServlet extends GraphQLServlet {
         private final AtomicBoolean nonUpgradeCalled = new AtomicBoolean(false);
 
