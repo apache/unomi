@@ -21,8 +21,8 @@ set -euo pipefail
 
 mvn clean install -P integration-tests,rat
 
-# UNOMI-1011: the package module must publish the distribution archives and must not
-# publish the empty buildcache jar used only as a Maven Build Cache workaround.
+# UNOMI-1011: the package module must publish the distribution archives, and no longer
+# builds or publishes the empty buildcache jar it once had for the (now disabled) build cache.
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
 mvn -pl package deploy -DskipTests -DaltDeploymentRepository="local::default::file://${STAGE}"
