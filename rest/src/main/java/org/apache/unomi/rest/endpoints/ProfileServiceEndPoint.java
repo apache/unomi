@@ -49,7 +49,7 @@ import java.util.*;
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Path("/profiles")
 @Component(service=ProfileServiceEndPoint.class,property = "osgi.jaxrs.resource=true")

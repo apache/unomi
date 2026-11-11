@@ -43,6 +43,7 @@ public class WebConfig {
     private String publicCorsAllowedOrigins;
     private String publicCorsMatchReferer;
     private String publicCorsTenantOrigins;
+    private String adminCorsAllowedOrigins;
     private String allowedProfileDownloadFormats;
     private int publicPostRequestBytesLimit;
 
@@ -80,6 +81,9 @@ public class WebConfig {
         String public_cors_tenantOrigins() default "true";
 
         @AttributeDefinition
+        String admin_cors_allowedOrigins() default "";
+
+        @AttributeDefinition
         String allowed_profile_download_formats() default "csv,yaml,json,text";
 
         @AttributeDefinition
@@ -101,6 +105,7 @@ public class WebConfig {
         this.publicCorsAllowedOrigins = config.public_cors_allowedOrigins();
         this.publicCorsMatchReferer = config.public_cors_matchReferer();
         this.publicCorsTenantOrigins = config.public_cors_tenantOrigins();
+        this.adminCorsAllowedOrigins = config.admin_cors_allowedOrigins();
         this.allowedProfileDownloadFormats = config.allowed_profile_download_formats();
         this.publicPostRequestBytesLimit = config.public_post_request_bytes_limit();
 
@@ -113,6 +118,7 @@ public class WebConfig {
         configSharingService.setProperty("publicCorsAllowedOrigins", publicCorsAllowedOrigins);
         configSharingService.setProperty("publicCorsMatchReferer", publicCorsMatchReferer);
         configSharingService.setProperty("publicCorsTenantOrigins", publicCorsTenantOrigins);
+        configSharingService.setProperty("adminCorsAllowedOrigins", adminCorsAllowedOrigins);
         configSharingService.setProperty("profileIdCookieSameSite", contextserverProfileIdCookieSameSite);
         configSharingService.setProperty("publicPostRequestBytesLimit", publicPostRequestBytesLimit);
         configSharingService.setProperty("allowedProfileDownloadFormats", allowedProfileDownloadFormats);

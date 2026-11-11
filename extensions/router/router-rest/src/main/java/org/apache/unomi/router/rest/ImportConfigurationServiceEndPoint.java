@@ -55,7 +55,7 @@ import java.util.List;
  */
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Path("/importConfiguration")
 @RequiresRole(UnomiRoles.ADMINISTRATOR)

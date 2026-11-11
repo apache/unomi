@@ -38,7 +38,7 @@ import javax.ws.rs.core.MediaType;
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Path("/lists")
 @Component(service=UserListServiceEndPoint.class,property = "osgi.jaxrs.resource=true")

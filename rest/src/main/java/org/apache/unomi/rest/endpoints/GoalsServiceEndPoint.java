@@ -39,7 +39,7 @@ import java.util.Set;
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Path("/goals")
 @Component(service=GoalsServiceEndPoint.class,property = "osgi.jaxrs.resource=true")

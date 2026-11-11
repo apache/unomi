@@ -35,7 +35,7 @@ import java.util.List;
  */
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
+@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = false)
 @Path("/scopes")
 @Component(service = ScopeServiceEndPoint.class, property = "osgi.jaxrs.resource=true")
 public class ScopeServiceEndPoint {

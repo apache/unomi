@@ -33,7 +33,7 @@ import javax.ws.rs.core.MediaType;
  */
 @Produces(MediaType.TEXT_PLAIN + ";charset=UTF-8")
 @Path("/test")
-@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
+@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = false)
 @Component(service = TestEndPoint.class, property = "osgi.jaxrs.resource=true")
 public class TestEndPoint {
 

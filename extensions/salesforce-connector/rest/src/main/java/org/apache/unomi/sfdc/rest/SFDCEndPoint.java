@@ -40,7 +40,7 @@ import java.util.Map;
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Path("/sfdc")
 @Component(service=SFDCEndPoint.class,property = "osgi.jaxrs.resource=true")

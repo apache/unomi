@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
-@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
+@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = false)
 @Path("/jsonSchema")
 @Component(service = JsonSchemaEndPoint.class, property = "osgi.jaxrs.resource=true")
 public class JsonSchemaEndPoint {

@@ -618,6 +618,20 @@ org.apache.unomi.public.cors.matchReferer=${env:UNOMI_PUBLIC_CORS_MATCH_REFERER:
 org.apache.unomi.public.cors.tenantOrigins=${env:UNOMI_PUBLIC_CORS_TENANT_ORIGINS:-true}
 ----
 
+[[_admin_cors_origins]]
+==== Admin UI origins (credentialed CORS)
+
+The admin REST API under `/cxs` (other than the public tracker endpoints above) and GraphQL under `/graphql` do not advertise credentialed CORS by default. A browser on another origin therefore cannot read admin responses using the operator's HTTP Basic credentials.
+
+If an admin UI is served from a different origin than Unomi, list that origin:
+
+[source]
+----
+org.apache.unomi.admin.cors.allowedOrigins=${env:UNOMI_ADMIN_CORS_ALLOWED_ORIGINS:-}
+----
+
+Example: `https://admin.example.com`. Same-origin deployments (a reverse proxy serving the UI and Unomi together) need no entry. This list is separate from `org.apache.unomi.public.cors.allowedOrigins`, which only covers the visitor cookie on public tracker endpoints.
+
 Example:
 
 [source,bash]
