@@ -419,32 +419,6 @@
                 </configuration>
             </plugin>
 
-        <!-- Create a dummy JAR just for caching, this is a workaround to avoid Maven Build cache issues -->
-            <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-jar-plugin</artifactId>
-            <executions>
-                <execution>
-                <id>create-dummy-jar</id>
-                <phase>package</phase>
-                <goals>
-                    <goal>jar</goal>
-                </goals>
-                <configuration>
-                    <!-- A classifier keeps this jar a side artifact. Without one, the jar plugin makes it
-                         the artifact of this pom-packaged module, which is what the blanket deploy skip
-                         below was added to hide, and that skip took the distribution with it. -->
-                    <classifier>buildcache</classifier>
-                    <archive>
-                    <manifest>
-                        <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                    </manifest>
-                    </archive>
-                </configuration>
-                </execution>
-            </executions>
-            </plugin>
-
         </plugins>
     </build>
 
