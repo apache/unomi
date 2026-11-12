@@ -78,6 +78,12 @@
                         <goals>
                             <goal>yarn</goal>
                         </goals>
+                        <configuration>
+                            <!-- The tracker is a git dependency: its prepare script runs a nested yarn
+                                 install that shares the yarn cache, and parallel downloads into that
+                                 cache corrupt it on a cold CI cache. -->
+                            <arguments>install --frozen-lockfile --network-concurrency 1</arguments>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>yarn build</id>
@@ -104,4 +110,39 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <!-- Active for every Apache release build. A Unomi release must bundle a tracker release
+                 voted by the PMC, not a commit of apache/unomi-tracker. -->
+            <id>apache-release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>require-released-tracker</id>
+                                <phase>validate</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <loadfile property="trackerPackage" srcFile="${project.basedir}/package.json" />
+                                        <fail message="package.json depends on a commit of apache-unomi-tracker. A release must use a voted tracker release, for example &quot;^2.0.0&quot;.">
+                                            <condition>
+                                                <contains string="${trackerPackage}" substring="unomi-tracker.git#" />
+                                            </condition>
+                                        </fail>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

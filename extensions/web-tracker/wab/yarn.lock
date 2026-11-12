@@ -816,7 +816,7 @@
     "@babel/types" "^7.4.4"
     esutils "^2.0.2"
 
-"@babel/runtime@7.29.7", "@babel/runtime@^7.18.9":
+"@babel/runtime@7.29.7", "@babel/runtime@^7.26.10":
   version "7.29.7"
   resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.29.7.tgz#12022450c45a4da6d8d8287b18a4ff2ddb23f768"
   integrity sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==
@@ -1019,12 +1019,11 @@ ansi-styles@^3.2.1:
   dependencies:
     color-convert "^1.9.0"
 
-apache-unomi-tracker@^1.1.0:
-  version "1.4.0"
-  resolved "https://registry.yarnpkg.com/apache-unomi-tracker/-/apache-unomi-tracker-1.4.0.tgz#50707986531fc4f5dec28cdf06a18e48610bcb78"
-  integrity sha512-5mYm1GQDrzUNxYcQymmGYYkk7AKjGakI5T3wUH4apjiRzKwPMiMyRvc45HvYNmcCGZoPlP1AEcimVu+2t0M7PA==
+"apache-unomi-tracker@git+https://github.com/apache/unomi-tracker.git#a590b71843c446d38ca87b07337fc6546c01833c":
+  version "2.0.0"
+  resolved "git+https://github.com/apache/unomi-tracker.git#a590b71843c446d38ca87b07337fc6546c01833c"
   dependencies:
-    "@babel/runtime" "^7.18.9"
+    "@babel/runtime" "^7.26.10"
     es6-crawler-detect "^3.3.0"
 
 atob@^2.1.2:
