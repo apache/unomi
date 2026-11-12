@@ -17,12 +17,17 @@
 package org.apache.unomi.graphql.schema;
 
 import graphql.GraphQL;
+import graphql.analysis.MaxQueryComplexityInstrumentation;
+import graphql.analysis.MaxQueryDepthInstrumentation;
 import graphql.execution.SubscriptionExecutionStrategy;
+import graphql.execution.instrumentation.ChainedInstrumentation;
+import graphql.execution.instrumentation.Instrumentation;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLSchema;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.fetchers.event.UnomiEventPublisher;
+import org.apache.unomi.graphql.limits.GraphQLLimitsConfig;
 import org.apache.unomi.graphql.providers.*;
 import org.apache.unomi.graphql.types.output.*;
 import org.apache.unomi.schema.api.SchemaService;
@@ -30,6 +35,7 @@ import org.osgi.service.component.annotations.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 
@@ -75,6 +81,8 @@ public class GraphQLSchemaUpdater {
     private CDPPropertyInterfaceRegister propertyInterfaceRegister;
 
     private ExecutionContextManager contextManager;
+
+    private GraphQLLimitsConfig limitsConfig;
 
     private ScheduledExecutorService executorService;
 
@@ -141,6 +149,14 @@ public class GraphQLSchemaUpdater {
     @Reference
     public void setContextManager(ExecutionContextManager contextManager) {
         this.contextManager = contextManager;
+    }
+
+    @Reference
+    public void setLimitsConfig(GraphQLLimitsConfig limitsConfig) {
+        this.limitsConfig = limitsConfig;
+        if (isActivated) {
+            updateSchema();
+        }
     }
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
@@ -315,9 +331,7 @@ public class GraphQLSchemaUpdater {
             contextManager.executeAsSystem(() -> {
                 final GraphQLSchema graphQLSchema = createGraphQLSchema();
 
-                this.graphQL = GraphQL.newGraphQL(graphQLSchema)
-                        .subscriptionExecutionStrategy(new SubscriptionExecutionStrategy())
-                        .build();
+                this.graphQL = buildGraphQL(graphQLSchema);
                 return null;
             });
 
@@ -326,6 +340,37 @@ public class GraphQLSchemaUpdater {
         } catch (Exception e) {
             LOGGER.error("Error executing GraphQL schema update as system subject", e);
         }
+    }
+
+    private GraphQL buildGraphQL(GraphQLSchema graphQLSchema) {
+        GraphQL.Builder builder = GraphQL.newGraphQL(graphQLSchema)
+                .subscriptionExecutionStrategy(new SubscriptionExecutionStrategy());
+        Instrumentation instrumentation = buildInstrumentation(limitsConfig);
+        if (instrumentation != null) {
+            builder.instrumentation(instrumentation);
+        }
+        return builder.build();
+    }
+
+    /** Depth and complexity limits, or {@code null} when none apply. Package-private for tests. */
+    static Instrumentation buildInstrumentation(GraphQLLimitsConfig limitsConfig) {
+        if (limitsConfig == null) {
+            return null;
+        }
+        List<Instrumentation> parts = new ArrayList<>();
+        if (limitsConfig.getMaxQueryDepth() > 0) {
+            parts.add(new MaxQueryDepthInstrumentation(limitsConfig.getMaxQueryDepth()));
+        }
+        if (limitsConfig.getMaxQueryComplexity() > 0) {
+            parts.add(new MaxQueryComplexityInstrumentation(limitsConfig.getMaxQueryComplexity()));
+        }
+        if (parts.isEmpty()) {
+            return null;
+        }
+        if (parts.size() == 1) {
+            return parts.get(0);
+        }
+        return new ChainedInstrumentation(parts);
     }
 
     /**
@@ -352,9 +397,7 @@ public class GraphQLSchemaUpdater {
             return contextManager.executeAsTenant(tenantId, () -> {
                 LOGGER.info("Creating GraphQL schema for tenant: {}", tenantId);
                 final GraphQLSchema graphQLSchema = createGraphQLSchemaForTenant(tenantId);
-                return GraphQL.newGraphQL(graphQLSchema)
-                        .subscriptionExecutionStrategy(new SubscriptionExecutionStrategy())
-                        .build();
+                return buildGraphQL(graphQLSchema);
             });
         } catch (Exception e) {
             LOGGER.error("Error creating GraphQL schema for tenant: " + tenantId, e);

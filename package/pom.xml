@@ -294,6 +294,14 @@
                                     <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
                                     <destFileName>org.apache.unomi.router.cfg</destFileName>
                                 </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>cdp-graphql-api-impl</artifactId>
+                                    <classifier>unomicfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
+                                    <destFileName>org.apache.unomi.graphql.cfg</destFileName>
+                                </artifactItem>
                             </artifactItems>
                         </configuration>
                     </execution>

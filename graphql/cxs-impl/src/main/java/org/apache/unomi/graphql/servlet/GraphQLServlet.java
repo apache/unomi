@@ -27,6 +27,8 @@ import org.apache.unomi.api.services.AdminCorsService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.AdminTenantConfig;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.graphql.limits.GraphQLLimitsConfig;
+import org.apache.unomi.graphql.limits.GraphQLRequestLimits;
 import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.servlet.auth.GraphQLServletSecurityValidator;
@@ -71,6 +73,8 @@ public class GraphQLServlet extends WebSocketServlet {
 
     private AdminCorsService adminCorsService;
 
+    private GraphQLLimitsConfig limitsConfig;
+
     private GraphQLServletSecurityValidator validator;
 
     @Reference
@@ -110,6 +114,11 @@ public class GraphQLServlet extends WebSocketServlet {
         this.securityService = securityService;
     }
 
+    @Reference
+    public void setLimitsConfig(GraphQLLimitsConfig limitsConfig) {
+        this.limitsConfig = limitsConfig;
+    }
+
     public GraphQLServlet() {
         LOGGER.info("GraphQLServlet created");
     }
@@ -124,7 +133,7 @@ public class GraphQLServlet extends WebSocketServlet {
                 ? adminTenantConfig
                 : () -> AdminTenantConfig.DEFAULT_ADMIN_TENANT_ID;
         this.validator = new GraphQLServletSecurityValidator(
-                tenantService, securityService, executionContextManager, tenantConfig);
+                tenantService, securityService, executionContextManager, tenantConfig, limitsConfig);
         super.init(config);
     }
 
@@ -328,10 +337,23 @@ public class GraphQLServlet extends WebSocketServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         LOGGER.debug("GraphQLServlet doPost called with request: {}", req.getRequestURI());
         try {
+            if (!GraphQLRequestLimits.checkContentLength(req.getContentLength(), limitsConfig, resp)) {
+                return;
+            }
             TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {
             };
-            Map<String, Object> body = GraphQLObjectMapper.getInstance().readValue(req.getInputStream(), typeRef);
-
+            Map<String, Object> body;
+            try {
+                // Capped while read: a chunked body declares no Content-Length for the check above.
+                body = GraphQLObjectMapper.getInstance().readValue(
+                        GraphQLRequestLimits.boundedBody(req.getInputStream(), limitsConfig), typeRef);
+            } catch (IOException e) {
+                if (!isBodyTooLarge(e)) {
+                    throw e;
+                }
+                GraphQLRequestLimits.sendBodyTooLarge(resp);
+                return;
+            }
 
             String query = (String) body.get("query");
             String operationName = (String) body.get("operationName");
@@ -392,6 +414,16 @@ public class GraphQLServlet extends WebSocketServlet {
         final Map<String, Object> specificationResult = executionResult.toSpecification();
 
         GraphQLObjectMapper.getInstance().writeValue(resp.getWriter(), specificationResult);
+    }
+
+    /** Jackson may wrap the stream's exception, so look along the cause chain. */
+    private static boolean isBodyTooLarge(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof GraphQLRequestLimits.BodyTooLargeException) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void setupCORSHeaders(HttpServletRequest httpServletRequest, ServletResponse response) {
