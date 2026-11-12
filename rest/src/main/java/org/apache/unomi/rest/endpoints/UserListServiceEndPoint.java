@@ -39,7 +39,7 @@ import java.util.List;
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Path("/userList")
 @Component(service=UserListServiceEndPoint.class,property = "osgi.jaxrs.resource=true")

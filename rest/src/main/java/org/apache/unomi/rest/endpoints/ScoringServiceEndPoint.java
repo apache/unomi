@@ -41,7 +41,7 @@ import java.util.List;
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Path("/scoring")
 @Component(service=ScoringServiceEndPoint.class,property = "osgi.jaxrs.resource=true")

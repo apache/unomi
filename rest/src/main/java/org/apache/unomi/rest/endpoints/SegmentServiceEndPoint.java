@@ -41,7 +41,7 @@ import java.util.List;
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Path("/segments")
 @Component(service=SegmentServiceEndPoint.class,property = "osgi.jaxrs.resource=true")

@@ -159,17 +159,77 @@ class PublicTrackerCorsFilterTest {
     }
 
     @Test
-    void nonPublicPathIsLeftAlone() {
-        // A listed origin, so only the path check keeps the CXF grant as it is.
+    void adminPathUnlistedOriginGetsNoCredentials() {
         when(uriInfo.getPath()).thenReturn("profiles/search");
         listed("https://shop.example");
-        lenient().when(request.getHeaderString("Origin")).thenReturn("https://shop.example");
+        when(request.getHeaderString("Origin")).thenReturn("https://shop.example");
         grantedByCxf();
 
         filter.restrictCredentials(request, response);
 
         assertEquals("*", headers.getFirst("Access-Control-Allow-Origin"));
-        assertEquals(Boolean.FALSE, headers.getFirst("Access-Control-Allow-Credentials"));
+        assertNull(headers.getFirst("Access-Control-Allow-Credentials"));
+    }
+
+    @Test
+    void adminPathListedOriginGetsCredentials() {
+        when(uriInfo.getPath()).thenReturn("rules");
+        filter = new PublicTrackerCorsFilter(new PublicTrackerSettings(null, null),
+                new AdminCorsSettings("https://admin.example"));
+        when(request.getHeaderString("Origin")).thenReturn("https://admin.example");
+        grantedByCxf();
+
+        filter.restrictCredentials(request, response);
+
+        assertEquals("https://admin.example", headers.getFirst("Access-Control-Allow-Origin"));
+        assertEquals("true", headers.getFirst("Access-Control-Allow-Credentials"));
+        assertEquals("Origin", headers.getFirst("Vary"));
+    }
+
+    /** The browser sends a preflight before a credentialed admin call; it must be upgraded too. */
+    @Test
+    void adminPathPreflightFromListedOriginGetsCredentials() {
+        when(uriInfo.getPath()).thenReturn("rules");
+        filter = new PublicTrackerCorsFilter(new PublicTrackerSettings(null, null),
+                new AdminCorsSettings("https://admin.example"));
+        when(request.getHeaderString("Origin")).thenReturn("https://admin.example");
+        lenient().when(request.getMethod()).thenReturn("OPTIONS");
+        lenient().when(request.getHeaderString("Access-Control-Request-Method")).thenReturn("POST");
+        grantedByCxf();
+
+        filter.restrictCredentials(request, response);
+
+        assertEquals("https://admin.example", headers.getFirst("Access-Control-Allow-Origin"));
+        assertEquals("true", headers.getFirst("Access-Control-Allow-Credentials"));
+    }
+
+    /** With the default (empty) admin list, an admin preflight never advertises credentials. */
+    @Test
+    void adminPathPreflightWithDefaultListGetsNoCredentials() {
+        when(uriInfo.getPath()).thenReturn("rules");
+        when(request.getHeaderString("Origin")).thenReturn("https://admin.example");
+        lenient().when(request.getMethod()).thenReturn("OPTIONS");
+        lenient().when(request.getHeaderString("Access-Control-Request-Method")).thenReturn("POST");
+        grantedByCxf();
+
+        filter.restrictCredentials(request, response);
+
+        assertEquals("*", headers.getFirst("Access-Control-Allow-Origin"));
+        assertNull(headers.getFirst("Access-Control-Allow-Credentials"));
+    }
+
+    /** The admin list does not leak into the public tracker: the two lists stay separate. */
+    @Test
+    void adminListedOriginGetsNoCredentialsOnPublicPath() {
+        filter = new PublicTrackerCorsFilter(new PublicTrackerSettings(null, null),
+                new AdminCorsSettings("https://admin.example"));
+        when(request.getHeaderString("Origin")).thenReturn("https://admin.example");
+        grantedByCxf();
+
+        filter.restrictCredentials(request, response);
+
+        assertEquals("*", headers.getFirst("Access-Control-Allow-Origin"));
+        assertNull(headers.getFirst("Access-Control-Allow-Credentials"));
     }
 
     @Test

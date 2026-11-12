@@ -41,7 +41,7 @@ import java.util.*;
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Path("/definitions")
 @Component(service=DefinitionsServiceEndPoint.class,property = "osgi.jaxrs.resource=true")

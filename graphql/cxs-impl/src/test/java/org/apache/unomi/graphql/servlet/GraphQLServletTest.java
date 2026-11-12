@@ -45,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -256,6 +257,56 @@ class GraphQLServletTest {
     /**
      * Overrides HTTP fall-through so tests can assert upgrade failures never reach it.
      */
+    /** A listed admin UI origin gets credentialed CORS, named explicitly and varying on Origin. */
+    @Test
+    void cors_listedOrigin_getsCredentials() throws Exception {
+        servlet.setAdminCorsService("https://admin.example"::equals);
+        when(request.getHeader("Origin")).thenReturn("https://admin.example");
+
+        servlet.doOptions(request, response);
+
+        verify(response).setHeader("Access-Control-Allow-Origin", "https://admin.example");
+        verify(response).setHeader("Access-Control-Allow-Credentials", "true");
+        verify(response).setHeader(eq("Access-Control-Allow-Headers"), contains("Authorization"));
+        verify(response).addHeader("Vary", "Origin");
+    }
+
+    /** An unlisted origin gets no CORS grant at all: the browser then refuses to expose the response. */
+    @Test
+    void cors_unlistedOrigin_getsNoCorsHeaders() throws Exception {
+        servlet.setAdminCorsService("https://admin.example"::equals);
+        when(request.getHeader("Origin")).thenReturn("https://evil.example.com");
+
+        servlet.doOptions(request, response);
+
+        verify(response, never()).setHeader(anyString(), anyString());
+        verify(response, never()).addHeader(anyString(), anyString());
+    }
+
+    /** No Origin (same-origin GET or a non-browser client): no CORS headers are needed. */
+    @Test
+    void cors_noOrigin_getsNoCorsHeaders() throws Exception {
+        servlet.setAdminCorsService(origin -> true);
+        when(request.getHeader("Origin")).thenReturn(null);
+
+        servlet.doOptions(request, response);
+
+        verify(response, never()).setHeader(anyString(), anyString());
+        verify(response, never()).addHeader(anyString(), anyString());
+    }
+
+    /** Before 4.0 any origin was echoed with credentials; the default empty list must no longer do that. */
+    @Test
+    void cors_emptyList_neverEchoesOrigin() throws Exception {
+        servlet.setAdminCorsService(origin -> false);
+        when(request.getHeader("Origin")).thenReturn("https://admin.example");
+
+        servlet.doOptions(request, response);
+
+        verify(response, never()).setHeader(eq("Access-Control-Allow-Origin"), anyString());
+        verify(response, never()).setHeader(eq("Access-Control-Allow-Credentials"), anyString());
+    }
+
     private static final class TrackingGraphQLServlet extends GraphQLServlet {
         private final AtomicBoolean nonUpgradeCalled = new AtomicBoolean(false);
 

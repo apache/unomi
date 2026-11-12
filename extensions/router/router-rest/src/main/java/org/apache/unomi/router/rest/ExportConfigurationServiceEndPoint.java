@@ -49,7 +49,7 @@ import java.util.List;
  */
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Path("/exportConfiguration")
 @RequiresRole(UnomiRoles.ADMINISTRATOR)

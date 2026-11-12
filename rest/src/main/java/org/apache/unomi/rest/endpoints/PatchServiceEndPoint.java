@@ -33,7 +33,7 @@ import javax.ws.rs.core.MediaType;
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Path("/patches")
 @Component(service=PatchServiceEndPoint.class,property = "osgi.jaxrs.resource=true")

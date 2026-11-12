@@ -39,7 +39,7 @@ import java.util.List;
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Path("/cluster")
 @Component(service=ClusterServiceEndPoint.class,property = "osgi.jaxrs.resource=true")

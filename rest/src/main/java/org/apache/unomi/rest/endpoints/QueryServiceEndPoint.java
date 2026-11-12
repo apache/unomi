@@ -42,7 +42,7 @@ import java.util.Map;
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Path("/query")
 @Component(service=QueryServiceEndPoint.class,property = "osgi.jaxrs.resource=true")

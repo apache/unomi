@@ -73,7 +73,7 @@ public final class PublicTrackerCorsPolicy {
             }
             String origin = normalizeEntry(entry);
             if (origin == null) {
-                warnings.add("Ignoring public CORS allowed origin '" + entry + "': expected scheme://host[:port] "
+                warnings.add("Ignoring CORS allowed origin '" + entry + "': expected scheme://host[:port] "
                         + "with http or https, no path and no wildcard");
                 continue;
             }

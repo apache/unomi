@@ -35,7 +35,7 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
-@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
+@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = false)
 @Path("/groovyActions")
 @RequiresRole(UnomiRoles.ADMINISTRATOR)
 @Component(service = GroovyActionsEndPoint.class, property = "osgi.jaxrs.resource=true")

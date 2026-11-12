@@ -24,14 +24,16 @@ import javax.ws.rs.core.MultivaluedMap;
 import java.util.List;
 
 /**
- * CXF's CORS filter, with cookies allowed on public tracker responses only for origins the operator listed.
+ * CXF's CORS filter, with credentials only for origins the operator listed.
  * <p>
- * CXF answers preflights and grants the public tracker endpoints to any origin without credentials. This
- * subclass rewrites that grant right after CXF writes it, in the same response filter call, so the result
- * does not depend on filter ordering. That matters because CXF 3.x only reads {@code javax.annotation.Priority}:
- * a separate filter annotated with {@code jakarta.annotation.Priority} gets the default priority and runs
- * before CXF's, which then overwrites it. Request handling, {@code @PreMatching} and the priority are CXF's own.
- * A response CXF did not grant is left alone.
+ * On public tracker paths, CXF answers preflights and grants any origin without credentials; this
+ * subclass upgrades listed origins to credentialed CORS (visitor cookie). On other (admin) paths,
+ * annotations advertise no credentials by default; listed admin UI origins are upgraded the same way.
+ * <p>
+ * Rewrites run in the same response filter call as CXF's grant so the result does not depend on filter
+ * ordering. That matters because CXF 3.x only reads {@code javax.annotation.Priority}: a separate filter
+ * annotated with {@code jakarta.annotation.Priority} gets the default priority and runs before CXF's,
+ * which then overwrites it. A response CXF did not grant is left alone.
  */
 public class PublicTrackerCorsFilter extends CrossOriginResourceSharingFilter {
 
@@ -39,12 +41,20 @@ public class PublicTrackerCorsFilter extends CrossOriginResourceSharingFilter {
     static final String ALLOW_CREDENTIALS = "Access-Control-Allow-Credentials";
 
     private final PublicTrackerSettings settings;
+    private final AdminCorsSettings adminCors;
 
     /**
-     * @param settings the resolved list of website origins that may use the visitor cookie
+     * @param settings  the resolved list of website origins that may use the visitor cookie
+     * @param adminCors the resolved list of origins that may use credentialed admin CORS
      */
-    public PublicTrackerCorsFilter(PublicTrackerSettings settings) {
+    public PublicTrackerCorsFilter(PublicTrackerSettings settings, AdminCorsSettings adminCors) {
         this.settings = settings;
+        this.adminCors = adminCors;
+    }
+
+    /** For tests that only cover the public tracker path. */
+    public PublicTrackerCorsFilter(PublicTrackerSettings settings) {
+        this(settings, new AdminCorsSettings(null));
     }
 
     @Override
@@ -54,35 +64,48 @@ public class PublicTrackerCorsFilter extends CrossOriginResourceSharingFilter {
     }
 
     void restrictCredentials(ContainerRequestContext requestContext, ContainerResponseContext responseContext) {
-        if (!isPublic(requestContext)) {
-            return;
-        }
         String origin = requestContext.getHeaderString("Origin");
         MultivaluedMap<String, Object> headers = responseContext.getHeaders();
         if (origin == null || !headers.containsKey(ALLOW_ORIGIN)) {
             return;
         }
-        if (allowsCredentials(requestContext, origin)) {
-            headers.putSingle(ALLOW_ORIGIN, origin);
-            headers.putSingle(ALLOW_CREDENTIALS, "true");
-            if (!variesOnOrigin(headers)) {
-                headers.add("Vary", "Origin");
+        if (isPublic(requestContext)) {
+            if (allowsPublicCredentials(requestContext, origin)) {
+                grantCredentials(headers, origin);
+                return;
             }
+            denyCredentials(headers);
             return;
         }
-        // Never echo an unlisted origin and never advertise cookies to it.
-        headers.putSingle(ALLOW_ORIGIN, "*");
-        headers.remove(ALLOW_CREDENTIALS);
+        if (adminCors.allows(origin)) {
+            grantCredentials(headers, origin);
+            return;
+        }
+        denyCredentials(headers);
     }
 
     /**
      * A preflight carries no API key, so any origin the operator or a tenant lists is accepted there; the
      * actual request, which carries the key, is checked against its own tenant.
      */
-    private boolean allowsCredentials(ContainerRequestContext requestContext, String origin) {
+    private boolean allowsPublicCredentials(ContainerRequestContext requestContext, String origin) {
         boolean preflight = "OPTIONS".equals(requestContext.getMethod())
                 && requestContext.getHeaderString("Access-Control-Request-Method") != null;
         return preflight ? settings.allowsPreflight(origin) : settings.policyForTenant(requestTenantId()).allows(origin);
+    }
+
+    private static void grantCredentials(MultivaluedMap<String, Object> headers, String origin) {
+        headers.putSingle(ALLOW_ORIGIN, origin);
+        headers.putSingle(ALLOW_CREDENTIALS, "true");
+        if (!variesOnOrigin(headers)) {
+            headers.add("Vary", "Origin");
+        }
+    }
+
+    private static void denyCredentials(MultivaluedMap<String, Object> headers) {
+        // Never echo an unlisted origin and never advertise cookies / Basic reuse to it.
+        headers.putSingle(ALLOW_ORIGIN, "*");
+        headers.remove(ALLOW_CREDENTIALS);
     }
 
     /** The tenant of the current request; replaced in tests. */

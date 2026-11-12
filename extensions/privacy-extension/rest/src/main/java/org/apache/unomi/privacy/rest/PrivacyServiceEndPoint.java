@@ -35,7 +35,7 @@ import java.util.List;
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Path("/privacy")
 @Component(service=PrivacyServiceEndPoint.class,property = "osgi.jaxrs.resource=true")

@@ -195,8 +195,8 @@ class PublicTrackerSettingsTest {
         lenient().when(configSharingService.getProperty(PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY)).thenReturn("shop.example, *");
         settings.activate();
         assertFalse(settings.policy().allows("https://shop.example"));
-        assertTrue(hasWarning("Ignoring public CORS allowed origin 'shop.example'"));
-        assertTrue(hasWarning("Ignoring public CORS allowed origin '*'"));
+        assertTrue(hasWarning("Ignoring CORS allowed origin 'shop.example'"));
+        assertTrue(hasWarning("Ignoring CORS allowed origin '*'"));
         assertTrue(hasWarning("None of the public CORS allowed origins"));
     }
 

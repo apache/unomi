@@ -40,7 +40,7 @@ import java.util.Locale;
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Path("/geonames")
 @Component(service=GeonamesEndPoint.class,property = "osgi.jaxrs.resource=true")

@@ -23,6 +23,7 @@ import graphql.GraphQL;
 import graphql.introspection.IntrospectionQuery;
 import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.services.AdminCorsService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.AdminTenantConfig;
 import org.apache.unomi.api.tenants.TenantService;
@@ -68,11 +69,20 @@ public class GraphQLServlet extends WebSocketServlet {
 
     private AdminTenantConfig adminTenantConfig;
 
+    private AdminCorsService adminCorsService;
+
     private GraphQLServletSecurityValidator validator;
 
     @Reference
     public void setServiceManager(ServiceManager serviceManager) {
         this.serviceManager = serviceManager;
+    }
+
+    // Mandatory: an optional static reference is never bound if the rest bundle registers it later,
+    // which would silently refuse every listed admin origin.
+    @Reference
+    public void setAdminCorsService(AdminCorsService adminCorsService) {
+        this.adminCorsService = adminCorsService;
     }
 
     @Reference
@@ -390,17 +400,20 @@ public class GraphQLServlet extends WebSocketServlet {
         }
 
         HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-
-        httpServletResponse.setHeader("Access-Control-Allow-Origin", getOriginHeaderFromRequest(httpServletRequest));
-        httpServletResponse.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, X-Apollo-Tracing");
+        String origin = httpServletRequest != null ? httpServletRequest.getHeader("Origin") : null;
+        if (origin == null) {
+            // Same-origin or non-browser: no CORS headers needed.
+            return;
+        }
+        if (adminCorsService == null || !adminCorsService.allows(origin)) {
+            // Fail closed: unlisted cross-origin callers get no CORS grant.
+            return;
+        }
+        httpServletResponse.setHeader("Access-Control-Allow-Origin", origin);
+        httpServletResponse.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, X-Apollo-Tracing, Authorization");
         httpServletResponse.setHeader("Access-Control-Allow-Credentials", "true");
         httpServletResponse.setHeader("Access-Control-Allow-Methods", "OPTIONS, POST, GET");
-    }
-
-    private String getOriginHeaderFromRequest(final HttpServletRequest httpServletRequest) {
-        return httpServletRequest != null && httpServletRequest.getHeader("Origin") != null
-                ? httpServletRequest.getHeader("Origin")
-                : "*";
+        httpServletResponse.addHeader("Vary", "Origin");
     }
 
     private void cleanupSecurityContext() {

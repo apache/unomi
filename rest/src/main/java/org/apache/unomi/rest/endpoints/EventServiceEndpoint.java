@@ -35,7 +35,7 @@ import java.util.Set;
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Path("/events")
 @Component(service=EventServiceEndpoint.class,property = "osgi.jaxrs.resource=true")

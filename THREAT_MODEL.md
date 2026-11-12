@@ -128,6 +128,7 @@ Per-surface trust table *(all inferred unless noted):*
 - Secure the Elasticsearch/OpenSearch backend + its network. *(inferred)*
 - Restrict who holds condition/rule/scripting authoring authority — it is equivalent to server-side code definition. *(inferred)*
 - Put the public endpoint behind rate-limiting / a CDN/WAF appropriate to public exposure. *(inferred)*
+- **CORS:** public tracker credentialed CORS (visitor cookie) is opt-in via `org.apache.unomi.public.cors.allowedOrigins` (and optional tenant lists). Admin REST/GraphQL credentialed CORS (operator Basic auth in the browser) is a separate opt-in via `org.apache.unomi.admin.cors.allowedOrigins`; the default is empty. Same-origin admin UIs need no entry. CORS response headers alone do not stop simple credentialed **writes** from another origin — keep the admin UI same-origin or add CSRF controls.
 
 ## §11 Known misuse patterns
 

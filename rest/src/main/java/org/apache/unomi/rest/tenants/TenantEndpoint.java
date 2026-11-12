@@ -48,7 +48,7 @@ import java.util.Map;
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
-        allowCredentials = true
+        allowCredentials = false
 )
 @Component(service= TenantEndpoint.class,property = "osgi.jaxrs.resource=true")
 @Path("/tenants")
