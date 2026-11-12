@@ -52,11 +52,6 @@
         <bundle>mvn:com.fasterxml.jackson.datatype/jackson-datatype-jsr310/${jackson.version}</bundle>
         <bundle>mvn:com.fasterxml.jackson.module/jackson-module-jaxb-annotations/${jackson.version}</bundle>
 
-        <bundle>mvn:com.github.java-json-tools/btf/${btf.version}</bundle>
-        <bundle>mvn:com.github.java-json-tools/msg-simple/${msg-simple.version}</bundle>
-        <bundle>mvn:com.github.java-json-tools/jackson-coreutils/${jackson-coreutils.version}</bundle>
-        <bundle>mvn:com.github.java-json-tools/json-patch/${json-patch.version}</bundle>
-        <bundle>mvn:com.google.guava/guava/${guava.version}</bundle>
         <bundle>mvn:org.json/json/${org-json.version}</bundle>
         <bundle>mvn:joda-time/joda-time/${joda-time.version}</bundle>
         <bundle>mvn:jakarta.annotation/jakarta.annotation-api/${jakarta-annotation-api.version}</bundle>
