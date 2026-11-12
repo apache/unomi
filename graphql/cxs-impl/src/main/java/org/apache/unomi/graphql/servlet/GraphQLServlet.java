@@ -21,6 +21,21 @@ import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.introspection.IntrospectionQuery;
+import graphql.language.Argument;
+import graphql.language.BooleanValue;
+import graphql.language.Document;
+import graphql.language.Field;
+import graphql.language.FragmentDefinition;
+import graphql.language.FragmentSpread;
+import graphql.language.InlineFragment;
+import graphql.language.NullValue;
+import graphql.language.OperationDefinition;
+import graphql.language.Selection;
+import graphql.language.SelectionSet;
+import graphql.language.Value;
+import graphql.language.VariableDefinition;
+import graphql.language.VariableReference;
+import graphql.parser.Parser;
 import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.AdminCorsService;
@@ -49,14 +64,22 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Component(service = GraphQLServlet.class)
 public class GraphQLServlet extends WebSocketServlet {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GraphQLServlet.class);
+
+    /** Query argument that saves a profile when it is missing (cdp.getProfile). */
+    private static final String CREATE_IF_MISSING = "createIfMissing";
 
     public static final String SCHEMA_URL = "/schema.json";
 
@@ -322,7 +345,16 @@ public class GraphQLServlet extends WebSocketServlet {
                 variables = GraphQLObjectMapper.getInstance().readValue(variableStr, typeRef);
             }
 
+            // Authenticate (and apply the size limit) before parsing the document for the method check.
             if (!validator.validate(query, operationName, req, resp)) {
+                return;
+            }
+            // GET is easy for a browser to issue cross-origin without a preflight. Only queries that write
+            // nothing: getProfile(createIfMissing: true) saves a profile, so it needs POST too.
+            if (!isReadOnlyOperation(query, operationName, variables)) {
+                resp.setHeader("Allow", "POST");
+                resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
+                        "GraphQL mutations, subscriptions and createIfMissing are not allowed over HTTP GET");
                 return;
             }
             setupCORSHeaders(req, resp);
@@ -337,6 +369,13 @@ public class GraphQLServlet extends WebSocketServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         LOGGER.debug("GraphQLServlet doPost called with request: {}", req.getRequestURI());
         try {
+            // Require JSON so a simple cross-site form post cannot change state.
+            final String contentType = req.getContentType();
+            if (contentType == null || !contentType.toLowerCase(Locale.ROOT).startsWith("application/json")) {
+                resp.sendError(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE,
+                        "GraphQL requests must use the application/json content type");
+                return;
+            }
             if (!GraphQLRequestLimits.checkContentLength(req.getContentLength(), limitsConfig, resp)) {
                 return;
             }
@@ -382,6 +421,109 @@ public class GraphQLServlet extends WebSocketServlet {
         } finally {
             cleanupSecurityContext();
         }
+    }
+
+    static boolean isReadOnlyOperation(final String query, final String operationName) {
+        return isReadOnlyOperation(query, operationName, Collections.emptyMap());
+    }
+
+    /**
+     * Whether the operation that would run for this document is a query that writes nothing. Mutations,
+     * subscriptions, documents that cannot be parsed, and queries that set {@code createIfMissing}
+     * (which saves a profile) are treated as non-read-only.
+     */
+    static boolean isReadOnlyOperation(final String query, final String operationName, final Map<String, Object> variables) {
+        if (query == null || query.trim().length() == 0) {
+            return true;
+        }
+        try {
+            final Document document = new Parser().parseDocument(query);
+            final List<OperationDefinition> operations = document.getDefinitionsOfType(OperationDefinition.class);
+            OperationDefinition operationToExecute = null;
+            if (operationName != null && operationName.trim().length() > 0) {
+                for (OperationDefinition operation : operations) {
+                    if (operationName.equals(operation.getName())) {
+                        operationToExecute = operation;
+                        break;
+                    }
+                }
+            } else if (!operations.isEmpty()) {
+                operationToExecute = operations.get(0);
+            }
+            if (operationToExecute == null) {
+                return true;
+            }
+            if (!OperationDefinition.Operation.QUERY.equals(operationToExecute.getOperation())) {
+                return false;
+            }
+            final Map<String, FragmentDefinition> fragments = new HashMap<>();
+            for (FragmentDefinition fragment : document.getDefinitionsOfType(FragmentDefinition.class)) {
+                fragments.put(fragment.getName(), fragment);
+            }
+            return !setsCreateIfMissing(operationToExecute.getSelectionSet(), operationToExecute,
+                    variables != null ? variables : Collections.emptyMap(), fragments, new HashSet<>());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Whether any field in the selection, fragments included, sets a {@code createIfMissing} argument to true. */
+    private static boolean setsCreateIfMissing(SelectionSet selectionSet, OperationDefinition operation,
+                                               Map<String, Object> variables, Map<String, FragmentDefinition> fragments,
+                                               Set<String> visitedFragments) {
+        if (selectionSet == null) {
+            return false;
+        }
+        for (Selection<?> selection : selectionSet.getSelections()) {
+            if (selection instanceof Field) {
+                Field field = (Field) selection;
+                for (Argument argument : field.getArguments()) {
+                    if (CREATE_IF_MISSING.equals(argument.getName()) && isTrue(argument.getValue(), operation, variables)) {
+                        return true;
+                    }
+                }
+                if (setsCreateIfMissing(field.getSelectionSet(), operation, variables, fragments, visitedFragments)) {
+                    return true;
+                }
+            } else if (selection instanceof InlineFragment) {
+                if (setsCreateIfMissing(((InlineFragment) selection).getSelectionSet(), operation, variables, fragments,
+                        visitedFragments)) {
+                    return true;
+                }
+            } else if (selection instanceof FragmentSpread) {
+                FragmentDefinition fragment = fragments.get(((FragmentSpread) selection).getName());
+                if (fragment != null && visitedFragments.add(fragment.getName())
+                        && setsCreateIfMissing(fragment.getSelectionSet(), operation, variables, fragments, visitedFragments)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** A literal {@code true}, or a variable that is (or defaults to) true. Anything not provably false counts as true. */
+    private static boolean isTrue(Value<?> value, OperationDefinition operation, Map<String, Object> variables) {
+        if (value instanceof BooleanValue) {
+            return ((BooleanValue) value).isValue();
+        }
+        if (value instanceof NullValue) {
+            return false;
+        }
+        if (value instanceof VariableReference) {
+            String name = ((VariableReference) value).getName();
+            if (variables.containsKey(name)) {
+                Object provided = variables.get(name);
+                return provided != null && !Boolean.FALSE.equals(provided) && !"false".equalsIgnoreCase(String.valueOf(provided));
+            }
+            for (VariableDefinition definition : operation.getVariableDefinitions()) {
+                if (name.equals(definition.getName())) {
+                    return definition.getDefaultValue() != null
+                            && isTrue(definition.getDefaultValue(), operation, Collections.emptyMap());
+                }
+            }
+            return false;
+        }
+        return true;
     }
 
     private void executeGraphQLRequest(

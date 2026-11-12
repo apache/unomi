@@ -779,6 +779,8 @@ GraphQL subscriptions over WebSocket are handled differently:
 * They keep the depth and complexity limits in force when the GraphQL servlet started. Restart Unomi (or the GraphQL bundle) to apply new values to them.
 * The length and body size limits do not apply to them. A subscription message is limited to 1 MB by the WebSocket buffer, and a socket must authenticate before it can run anything.
 
+HTTP GET may run query operations only. Mutations, subscriptions, and queries that set `createIfMissing: true` on `getProfile` (which saves a profile) must use HTTP POST with `Content-Type: application/json` (a charset parameter is fine).
+
 === Scripting security
 
 ==== Multi-layer scripting filtering system

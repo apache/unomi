@@ -471,6 +471,10 @@ In addition to tenant API keys, Unomi 4.0 hardens several contracts that can bre
 |GraphQL documents had no server-side size, depth, or complexity bound beyond container limits.
 |GraphQL under `/graphql` applies configurable length, body size, depth, and complexity limits (`org.apache.unomi.graphql.*`). Defaults leave GraphiQL introspection and the public `getProfile` / `processEvents` fields usable. See <<_graphql_query_limits,GraphQL query limits>>.
 
+|GraphQL over HTTP
+|`GET /graphql` ran any operation, mutations included, and `POST /graphql` parsed a JSON body whatever its `Content-Type`.
+|`GET` runs queries only (`405` for mutations, subscriptions, and `getProfile` with `createIfMissing: true`). `POST` requires `Content-Type: application/json` (`415` otherwise); a charset parameter is fine. Clients that send JSON without that header must add it: for example `curl -d` alone sends `application/x-www-form-urlencoded`. See <<_graphql_query_limits,GraphQL query limits>>.
+
 |Profile cookie `HttpOnly`
 |Often defaulted to `false` (JS could read `document.cookie`)
 |Default **`true`**. Prefer `profileId` from the JSON response. Opt out with `org.apache.unomi.profile.cookie.httpOnly=false` only if you accept the tradeoff.

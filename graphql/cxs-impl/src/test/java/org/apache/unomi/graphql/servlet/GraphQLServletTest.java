@@ -19,6 +19,10 @@ package org.apache.unomi.graphql.servlet;
 
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.ExecutionContextManager;
+import graphql.GraphQL;
+import graphql.schema.idl.RuntimeWiring;
+import graphql.schema.idl.SchemaGenerator;
+import graphql.schema.idl.SchemaParser;
 import org.apache.unomi.graphql.limits.GraphQLLimitsConfig;
 import org.apache.unomi.graphql.servlet.auth.GraphQLServletSecurityValidator;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
@@ -38,6 +42,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -323,6 +329,7 @@ class GraphQLServletTest {
     @Test
     void doPost_declaredOversizedBody_is413WithoutReading() throws Exception {
         servlet.setLimitsConfig(bodyLimit(100));
+        when(request.getContentType()).thenReturn("application/json");
         when(request.getContentLength()).thenReturn(101);
 
         servlet.doPost(request, response);
@@ -339,6 +346,7 @@ class GraphQLServletTest {
     @Test
     void doPost_chunkedOversizedBody_is413AndStopsReading() throws Exception {
         servlet.setLimitsConfig(bodyLimit(1024));
+        when(request.getContentType()).thenReturn("application/json");
         when(request.getContentLength()).thenReturn(-1);
         byte[] body = ("{\"query\":\"" + "a".repeat(1024 * 1024) + "\"}").getBytes(StandardCharsets.UTF_8);
         BodyStream stream = new BodyStream(body);
@@ -355,6 +363,7 @@ class GraphQLServletTest {
     @Test
     void doPost_chunkedBodyWithinLimit_reachesValidator() throws Exception {
         servlet.setLimitsConfig(bodyLimit(1024));
+        when(request.getContentType()).thenReturn("application/json");
         when(request.getContentLength()).thenReturn(-1);
         when(request.getInputStream()).thenReturn(
                 new BodyStream("{\"query\":\"{ __typename }\"}".getBytes(StandardCharsets.UTF_8)));
@@ -364,6 +373,181 @@ class GraphQLServletTest {
 
         verify(validator).validate(eq("{ __typename }"), isNull(), eq(request), eq(response));
         verify(response, never()).sendError(eq(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE), anyString());
+    }
+
+    // --- HTTP method and content type rules -------------------------------------------------------
+
+    private static final String QUERY = "{ ping }";
+    private static final String MUTATION = "mutation { touch }";
+
+    /** A real graphql-java instance behind the schema updater: queries answer "pong", the mutation "touched". */
+    private StringWriter givenExecutableSchema() throws IOException {
+        GraphQL graphQL = GraphQL.newGraphQL(new SchemaGenerator().makeExecutableSchema(
+                new SchemaParser().parse("type Query { ping: String, profile(createIfMissing: Boolean): String }"
+                        + " type Mutation { touch: String }"),
+                RuntimeWiring.newRuntimeWiring()
+                        .type("Query", t -> t.dataFetcher("ping", env -> "pong").dataFetcher("profile", env -> "loaded"))
+                        .type("Mutation", t -> t.dataFetcher("touch", env -> "touched"))
+                        .build())).build();
+        GraphQLSchemaUpdater updater = mock(GraphQLSchemaUpdater.class);
+        when(updater.getGraphQL()).thenReturn(graphQL);
+        servlet.setGraphQLSchemaUpdater(updater);
+        StringWriter out = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(out));
+        return out;
+    }
+
+    private void givenGet(String query) {
+        when(request.getParameter("query")).thenReturn(query);
+    }
+
+    /** An authenticated GET query still runs. */
+    @Test
+    void doGet_query_runs() throws Exception {
+        StringWriter out = givenExecutableSchema();
+        givenGet(QUERY);
+        when(validator.validate(eq(QUERY), isNull(), eq(request), eq(response))).thenReturn(true);
+
+        servlet.doGet(request, response);
+
+        assertTrue(out.toString().contains("pong"), out.toString());
+        verify(response, never()).sendError(eq(HttpServletResponse.SC_METHOD_NOT_ALLOWED), anyString());
+    }
+
+    /** A mutation over GET is refused with 405 and Allow: POST, and never executed. */
+    @Test
+    void doGet_mutation_is405AndNeverRuns() throws Exception {
+        GraphQLSchemaUpdater updater = mock(GraphQLSchemaUpdater.class);
+        servlet.setGraphQLSchemaUpdater(updater);
+        givenGet(MUTATION);
+        when(validator.validate(eq(MUTATION), isNull(), eq(request), eq(response))).thenReturn(true);
+
+        servlet.doGet(request, response);
+
+        verify(response).setHeader("Allow", "POST");
+        verify(response).sendError(eq(HttpServletResponse.SC_METHOD_NOT_ALLOWED), anyString());
+        verifyNoInteractions(updater);
+    }
+
+    /** A query document whose selected operation is a mutation is refused too. */
+    @Test
+    void doGet_mutationSelectedByOperationName_is405() throws Exception {
+        String document = "query readIt { ping } mutation writeIt { touch }";
+        givenGet(document);
+        when(request.getParameter("operationName")).thenReturn("writeIt");
+        when(validator.validate(eq(document), eq("writeIt"), eq(request), eq(response))).thenReturn(true);
+
+        servlet.doGet(request, response);
+
+        verify(response).sendError(eq(HttpServletResponse.SC_METHOD_NOT_ALLOWED), anyString());
+    }
+
+    /**
+     * Authentication (with its size limit) runs before the document is parsed for the method check:
+     * an unauthenticated GET mutation gets the validator's answer, not 405.
+     */
+    @Test
+    void doGet_unauthenticatedMutation_isRejectedByValidatorFirst() throws Exception {
+        givenGet(MUTATION);
+        when(validator.validate(eq(MUTATION), isNull(), eq(request), eq(response))).thenReturn(false);
+
+        servlet.doGet(request, response);
+
+        verify(validator).validate(eq(MUTATION), isNull(), eq(request), eq(response));
+        verify(response, never()).sendError(eq(HttpServletResponse.SC_METHOD_NOT_ALLOWED), anyString());
+        verify(response, never()).setHeader(eq("Allow"), anyString());
+    }
+
+    /** getProfile(createIfMissing: true) saves a profile: refused over GET like a mutation, never executed. */
+    @Test
+    void doGet_createIfMissingTrue_is405AndNeverRuns() throws Exception {
+        GraphQLSchemaUpdater updater = mock(GraphQLSchemaUpdater.class);
+        servlet.setGraphQLSchemaUpdater(updater);
+        String query = "{ profile(createIfMissing: true) }";
+        givenGet(query);
+        when(validator.validate(eq(query), isNull(), eq(request), eq(response))).thenReturn(true);
+
+        servlet.doGet(request, response);
+
+        verify(response).setHeader("Allow", "POST");
+        verify(response).sendError(eq(HttpServletResponse.SC_METHOD_NOT_ALLOWED), anyString());
+        verifyNoInteractions(updater);
+    }
+
+    /** The same through a GET variables parameter. */
+    @Test
+    void doGet_createIfMissingTrueThroughVariables_is405() throws Exception {
+        String query = "query q($c: Boolean) { profile(createIfMissing: $c) }";
+        givenGet(query);
+        when(request.getParameter("operationName")).thenReturn(null);
+        when(request.getParameter("variables")).thenReturn("{\"c\": true}");
+        when(validator.validate(eq(query), isNull(), eq(request), eq(response))).thenReturn(true);
+
+        servlet.doGet(request, response);
+
+        verify(response).sendError(eq(HttpServletResponse.SC_METHOD_NOT_ALLOWED), anyString());
+    }
+
+    /** Reading a profile without creating it still works over GET. */
+    @Test
+    void doGet_createIfMissingFalse_runs() throws Exception {
+        StringWriter out = givenExecutableSchema();
+        String query = "{ profile(createIfMissing: false) }";
+        givenGet(query);
+        when(validator.validate(eq(query), isNull(), eq(request), eq(response))).thenReturn(true);
+
+        servlet.doGet(request, response);
+
+        assertTrue(out.toString().contains("loaded"), out.toString());
+        verify(response, never()).sendError(eq(HttpServletResponse.SC_METHOD_NOT_ALLOWED), anyString());
+    }
+
+    /** A cross-site form can post text/plain without a preflight: refused before the body is read. */
+    @Test
+    void doPost_textPlain_is415WithoutReading() throws Exception {
+        when(request.getContentType()).thenReturn("text/plain");
+
+        servlet.doPost(request, response);
+
+        verify(response).sendError(eq(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE), anyString());
+        verify(request, never()).getInputStream();
+        verifyNoInteractions(validator);
+    }
+
+    @Test
+    void doPost_formEncoded_is415() throws Exception {
+        when(request.getContentType()).thenReturn("application/x-www-form-urlencoded");
+
+        servlet.doPost(request, response);
+
+        verify(response).sendError(eq(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE), anyString());
+        verifyNoInteractions(validator);
+    }
+
+    @Test
+    void doPost_missingContentType_is415() throws Exception {
+        when(request.getContentType()).thenReturn(null);
+
+        servlet.doPost(request, response);
+
+        verify(response).sendError(eq(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE), anyString());
+        verifyNoInteractions(validator);
+    }
+
+    /** Mutations still run over POST with JSON; a charset parameter and any letter case are accepted. */
+    @Test
+    void doPost_jsonWithCharset_runsMutation() throws Exception {
+        StringWriter out = givenExecutableSchema();
+        when(request.getContentType()).thenReturn("Application/JSON; charset=UTF-8");
+        when(request.getContentLength()).thenReturn(-1);
+        when(request.getInputStream()).thenReturn(
+                new BodyStream(("{\"query\":\"" + MUTATION + "\"}").getBytes(StandardCharsets.UTF_8)));
+        when(validator.validate(eq(MUTATION), isNull(), eq(request), eq(response))).thenReturn(true);
+
+        servlet.doPost(request, response);
+
+        assertTrue(out.toString().contains("touched"), out.toString());
+        verify(response, never()).sendError(eq(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE), anyString());
     }
 
     /** A request body as the container hands it over. */
