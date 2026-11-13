@@ -78,6 +78,7 @@
   "propertytype:gender",
   "propertytype:googleid",
   "propertytype:income",
+  "propertytype:interests",
   "propertytype:jobtitle",
   "propertytype:kids",
   "propertytype:lastname",
