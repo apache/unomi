@@ -47,7 +47,9 @@ When single-tenant compatibility mode is enabled:
   served from Unomi's own origin needs no change. See <<_public_tracker_compatibility,Compatibility with Unomi 2.x and 3.x>>.
 
 This allows Unomi 2 and Unomi 3 clients to work with Unomi 4.0 immediately after migration, giving you time to update
-applications to tenant API keys.
+applications to tenant API keys. Tracker 1.x is one of those clients: it keeps working while this mode is on, because
+it cannot send an API key. When you turn the mode off, those pages need tracker 2.0.0 or later and `apiKey`. See
+<<_upgrading_the_web_tracker,Upgrading the tracker from 1.x to 2.0>>.
 
 Unomi 2 and Unomi 3 clients behave the same way in this mode. Third-party / peer servers keep using `X-Unomi-Peer` and
 `etc/org.apache.unomi.thirdparty.cfg` while the mode is on; that path is not used in normal multi-tenant mode, where the
