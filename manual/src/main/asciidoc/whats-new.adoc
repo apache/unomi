@@ -11,6 +11,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+=== What's new in Apache Unomi 3.1
+
+Apache Unomi 3.1 changes the configuration of GraphQL subscriptions, of the scripting allow list and of the `matchesRegex` operator.
+Read this section before you upgrade from Apache Unomi 3.0.
+
+==== GraphQL subscription credentials
+
+A GraphQL subscription over WebSocket uses the same Basic credentials as the GraphQL HTTP endpoint.
+A client sends the credentials in one of two ways:
+
+* In the `Authorization` header of the WebSocket upgrade request.
+* In the `Authorization` key of the `connection_init` payload. A browser client uses this way, because the browser WebSocket API cannot set request headers.
+
+The GraphiQL console sends the `Authorization` header of its "Headers" tab in the `connection_init` payload.
+Update a subscription client that does not send credentials before you upgrade.
+
+==== Scripting allow list
+
+The default value of `org.apache.unomi.scripting.allow` in `etc/custom.system.properties` no longer contains `org.mvel2.*`.
+If your installation sets `org.apache.unomi.scripting.allow` or the `UNOMI_ALLOW_SCRIPTING_CLASSES` environment variable, remove `org.mvel2.*` from your value.
+
+==== Configuration of the matchesRegex operator
+
+The `matchesRegex` condition operator has new limits on the length of the pattern and on the length of the tested value.
+When a limit is reached, the condition evaluates to `false` and Unomi writes a warning to the log.
+These system properties set the limits:
+
+[options="header"]
+|===
+|Property |Default value
+|`org.apache.unomi.conditions.regex.maxPatternLength` |`512`
+|`org.apache.unomi.conditions.regex.maxInputLength` |`10000`
+|`org.apache.unomi.conditions.regex.maxCharAccesses` |`1000000`
+|===
+
+If a rule or a segment uses a longer pattern or tests a longer value, raise the matching limit.
+
 === What's new in Apache Unomi 3.0
 
 Apache Unomi 3 is a new release focused on integrations of the client to support elasticsearch version 9.
