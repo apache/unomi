@@ -1,0 +1,4 @@
+{
+    "id": "sumByKeyMergeStrategy",
+    "filter": "(propertyMergeStrategyExecutorId=sumByKeyPropertyMergeStrategyExecutor)"
+}
