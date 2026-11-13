@@ -463,7 +463,7 @@ Common merge strategies include:
 * `oldestMergeStrategy` - Use the oldest value (for dates and timestamps)
 * `addMergeStrategy` - Add values together (for numeric types)
 * `nonEmptyMergeStrategy` - Prefer non-empty values
-* `sumByKeyMergeStrategy` - For a list of `{key, value}` objects, add `value` for entries that share a `key`
+* `sumByKeyMergeStrategy` - For a list of `{key, value}` objects, add `value` for entries that share a `key`. A `value` may be a number or a numeric string; entries that cannot be summed are kept unchanged
 
 The built-in profile property `interests` uses `sumByKeyMergeStrategy`.
 

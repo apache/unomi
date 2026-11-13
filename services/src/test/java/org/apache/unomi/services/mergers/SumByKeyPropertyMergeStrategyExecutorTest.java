@@ -107,18 +107,53 @@ public class SumByKeyPropertyMergeStrategyExecutorTest {
     }
 
     @Test
-    public void skipsEntriesThatHaveNoKeyOrNoNumber() {
+    public void keepsEntriesThatCannotBeSummed() {
         Map<String, Object> missingKey = new LinkedHashMap<>();
         missingKey.put("value", 9);
         Map<String, Object> missingNumber = new LinkedHashMap<>();
         missingNumber.put("key", "pension");
         missingNumber.put("value", "high");
-        Profile master = profile(interests(entry("funds", 1)));
+        Profile master = profile(interests(entry("funds", 1), missingNumber));
         Profile other = profile(new ArrayList<>(Arrays.asList(missingKey, missingNumber, entry("funds", 4))));
 
         assertTrue(executor.mergeProperty("interests", null, Collections.singletonList(other), master));
 
-        assertEquals(interests(entry("funds", 5)), master.getProperty("interests"));
+        assertEquals(Arrays.asList(entry("funds", 5), missingNumber, missingKey), master.getProperty("interests"));
+    }
+
+    @Test
+    public void sumsNumericStringValues() {
+        Map<String, Object> textValue = new LinkedHashMap<>();
+        textValue.put("key", "funds");
+        textValue.put("value", " 10 ");
+        Map<String, Object> decimalText = new LinkedHashMap<>();
+        decimalText.put("key", "pension");
+        decimalText.put("value", "0.5");
+        Profile master = profile(new ArrayList<>(Arrays.asList(textValue)));
+        Profile other = profile(new ArrayList<>(Arrays.asList(entry("funds", 5), decimalText)));
+
+        assertTrue(executor.mergeProperty("interests", null, Collections.singletonList(other), master));
+
+        assertEquals(interests(entry("funds", 15), entry("pension", 0.5d)), master.getProperty("interests"));
+    }
+
+    @Test
+    public void copiesANonListValueOntoAProfileThatHasNone() {
+        Profile master = profile(null);
+        Profile other = profile("funds");
+
+        assertTrue(executor.mergeProperty("interests", null, Collections.singletonList(other), master));
+        assertEquals("funds", master.getProperty("interests"));
+    }
+
+    @Test
+    public void prefersAMergedListOverANonListValue() {
+        Profile master = profile(null);
+        Profile first = profile("funds");
+        Profile second = profile(interests(entry("pension", 7)));
+
+        assertTrue(executor.mergeProperty("interests", null, Arrays.asList(first, second), master));
+        assertEquals(interests(entry("pension", 7)), master.getProperty("interests"));
     }
 
     private static Profile profile(Object interests) {

@@ -29,7 +29,9 @@ import java.util.Map;
 /**
  * Adds {@code value} for entries that share a {@code key}.
  * Used for {@code properties.interests}, a list of {@code {key, value}} objects.
- * A value that is not that list is left unchanged.
+ * A {@code value} may be a number or a numeric string. Entries that cannot be summed are kept as they are.
+ * If the target already holds something other than a list, it is left unchanged.
+ * If the target has no value and no list is merged in, the first other non-null value is copied.
  */
 public class SumByKeyPropertyMergeStrategyExecutor implements PropertyMergeStrategyExecutor {
 
@@ -40,7 +42,8 @@ public class SumByKeyPropertyMergeStrategyExecutor implements PropertyMergeStrat
             return false;
         }
 
-        List<Map<String, Object>> merged = entries(current);
+        List<Object> merged = entries(current);
+        Object fallback = null;
         boolean changed = false;
         for (Profile profileToMerge : profilesToMerge) {
             Object incoming = profileToMerge.getProperty(propertyName);
@@ -48,28 +51,44 @@ public class SumByKeyPropertyMergeStrategyExecutor implements PropertyMergeStrat
                 continue;
             }
             if (!(incoming instanceof List)) {
+                if (fallback == null) {
+                    fallback = incoming;
+                }
                 continue;
             }
-            changed |= addInto(merged, entries(incoming));
+            changed |= addInto(merged, (List<?>) incoming);
         }
         if (!changed) {
+            if (current == null && fallback != null) {
+                targetProfile.setProperty(propertyName, fallback);
+                return true;
+            }
             return false;
         }
         targetProfile.setProperty(propertyName, merged);
         return true;
     }
 
-    private static boolean addInto(List<Map<String, Object>> target, List<Map<String, Object>> incoming) {
+    private static List<Object> entries(Object value) {
+        List<Object> entries = new ArrayList<>();
+        if (value instanceof List) {
+            addInto(entries, (List<?>) value);
+        }
+        return entries;
+    }
+
+    private static boolean addInto(List<Object> target, List<?> incoming) {
         boolean changed = false;
-        for (Map<String, Object> entry : incoming) {
-            String key = (String) entry.get("key");
-            Map<String, Object> existing = null;
-            for (Map<String, Object> candidate : target) {
-                if (key.equals(candidate.get("key"))) {
-                    existing = candidate;
-                    break;
+        for (Object item : incoming) {
+            Map<String, Object> entry = summable(item);
+            if (entry == null) {
+                if (item != null && !target.contains(item)) {
+                    target.add(item);
+                    changed = true;
                 }
+                continue;
             }
+            Map<String, Object> existing = find(target, entry.get("key"));
             if (existing == null) {
                 target.add(entry);
                 changed = true;
@@ -84,41 +103,61 @@ public class SumByKeyPropertyMergeStrategyExecutor implements PropertyMergeStrat
         return changed;
     }
 
-    private static List<Map<String, Object>> entries(Object value) {
-        List<Map<String, Object>> entries = new ArrayList<>();
-        if (!(value instanceof List)) {
-            return entries;
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> find(List<Object> target, Object key) {
+        for (Object candidate : target) {
+            if (candidate instanceof Map && key.equals(((Map<String, Object>) candidate).get("key"))
+                    && ((Map<String, Object>) candidate).get("value") instanceof Number) {
+                return (Map<String, Object>) candidate;
+            }
         }
-        List<Map<String, Object>> raw = new ArrayList<>();
-        for (Object item : (List<?>) value) {
-            if (!(item instanceof Map)) {
-                continue;
-            }
-            Map<?, ?> source = (Map<?, ?>) item;
-            Object key = source.get("key");
-            Number number = toNumber(source.get("value"));
-            if (key == null || number == null) {
-                continue;
-            }
-            Map<String, Object> copy = new LinkedHashMap<>();
-            for (Map.Entry<?, ?> field : source.entrySet()) {
-                if (field.getKey() != null) {
-                    copy.put(field.getKey().toString(), field.getValue());
-                }
-            }
-            copy.put("key", key.toString());
-            copy.put("value", number);
-            raw.add(copy);
+        return null;
+    }
+
+    /**
+     * Returns a copy of {@code item} with a string key and a numeric value, or null if it cannot be summed.
+     */
+    private static Map<String, Object> summable(Object item) {
+        if (!(item instanceof Map)) {
+            return null;
         }
-        addInto(entries, raw);
-        return entries;
+        Map<?, ?> source = (Map<?, ?>) item;
+        Object key = source.get("key");
+        Number number = toNumber(source.get("value"));
+        if (key == null || number == null) {
+            return null;
+        }
+        Map<String, Object> copy = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> field : source.entrySet()) {
+            if (field.getKey() != null) {
+                copy.put(field.getKey().toString(), field.getValue());
+            }
+        }
+        copy.put("key", key.toString());
+        copy.put("value", number);
+        return copy;
     }
 
     private static Number toNumber(Object value) {
         if (value instanceof Number) {
             return (Number) value;
         }
-        return null;
+        if (!(value instanceof String)) {
+            return null;
+        }
+        String text = ((String) value).trim();
+        try {
+            long parsed = Long.parseLong(text);
+            return parsed >= Integer.MIN_VALUE && parsed <= Integer.MAX_VALUE ? (Number) (int) parsed : (Number) parsed;
+        } catch (NumberFormatException e) {
+            // not an integer, try a decimal below
+        }
+        try {
+            double parsed = Double.parseDouble(text);
+            return Double.isFinite(parsed) ? parsed : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private static Number add(Number left, Number right) {

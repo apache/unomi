@@ -564,7 +564,8 @@ The sections above cover authentication and client-facing hardening. The lists b
 ==== Integrators / REST clients
 
 * Creating a profile without an `itemId` is refused.
-* Merging profiles adds the points of `properties.interests` by key. Previously the last profile's list replaced the others. See <<_property_types,Property Types>>.
+* Merging profiles adds the points of `properties.interests` by key. Previously the last profile's list replaced the others. Values that are not numbers are kept unchanged. See <<_property_types,Property Types>>.
+* `interests` is now a built-in profile property type of type `json`, so GraphQL lists it as an `interests` field on `CDP_Profile`, `CDP_Persona`, `CDP_PersonaInput` and `CDP_ProfileUpdateEventInput`. GraphQL no longer generates string filters (`_equals`, `_startsWith`, ...) for `json` properties, since they could not match a JSON value.
 * Condition validation failures on REST return a generic `badRequest` response. Detailed messages stay in the server log. See <<_condition_validation,Condition validation>>.
 * Public endpoints need a tenant public API key unless <<_v2_compatibility_mode,single-tenant compatibility mode>> is on (for clients written for Unomi 2 or Unomi 3). See <<_updating_applications_consuming_unomi,Updating applications consuming Unomi>> and the client-facing hardening notes above.
 * Websites on another origin must be listed for the visitor cookie; see <<_public_tracker_origins,Websites on other origins>>.
