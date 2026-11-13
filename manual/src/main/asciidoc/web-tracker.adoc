@@ -55,7 +55,35 @@ The tracker sends the key in the `X-Unomi-Api-Key` header on `context.json` and 
 * A custom header makes the browser send a CORS preflight request before each request when Unomi is on another origin. Unomi 2.x and 3.x servers accept the header and ignore it, so a page that sets a key still works with them.
 * Create the tenant and obtain its plaintext keys with `POST /cxs/tenants/{id}/apikeys` before integrating a site. See <<_multitenancy,Multi-tenancy>>.
 
-`apiKey` and `sendCredentials` need version 2.0.0 or later of the tracker (the `apache-unomi-tracker` NPM package). Earlier versions of the tracker bundled at `/tracker/unomi-web-tracker.js` do not send the key; use compatibility mode with them.
+`apiKey` and `sendCredentials` need version 2.0.0 or later of the tracker (the `apache-unomi-tracker` NPM package). Earlier versions do not send the key. Keep <<_v2_compatibility_mode,single-tenant compatibility mode>> on until those pages use tracker 2.0. See <<_upgrading_the_web_tracker,Upgrading the tracker from 1.x to 2.0>>.
+
+[#_upgrading_the_web_tracker]
+==== Upgrading the tracker from 1.x to 2.0
+
+Tracker 2.0 replaces tracker 1.x. It works with Unomi 2.x, 3.x and 4.x.
+
+A page that already works keeps the same configuration, on the same Unomi server. Unomi 2.x, Unomi 3.x, and Unomi 4 in <<_v2_compatibility_mode,single-tenant compatibility mode>> need no new setting. A multi-tenant Unomi 4 server needs tracker 2.0.0 or later and `apiKey`, as described above. Tracker 1.x cannot send that key, so the server answers `401`.
+
+Where the script comes from matters:
+
+* The copy Unomi serves at `/tracker/unomi-web-tracker.js` is updated when you upgrade the server. Unomi 4 serves tracker 2.0.
+* A site that installed the `apache-unomi-tracker` package must upgrade that package itself (`apache-unomi-tracker@2`).
+* A file copied from an older Unomi stays on tracker 1.x until you replace it. Leave compatibility mode on until you do.
+
+What a site may notice comes from fixes. The configuration does not change:
+
+* An empty page `attributes` object is no longer sent. Unomi 2.4 and later rejected those events, so page views and clicks from older examples are stored again. Attributes that contain values are still sent.
+* Every click on a tracked element is sent, including a click on an image, an icon or some text inside it. Tracker 1.x sent only the first click on each element, and often nothing for a click on a child.
+* The page's own click handlers run once per click. They ran twice.
+* A link or a form still works when Unomi cannot be reached, when it never answers, and when tracking is turned off. A tracked form is submitted with the button that was used, including a button named `submit`.
+* A missing, blank or zero `timeoutInMilliseconds` uses 1.5 seconds. With tracker 1.x every request failed at once.
+
+`apiKey` and `sendCredentials` are new and optional. `sendCredentials` is described under <<_web_tracker_cookies,Cookie/session handling>>.
+
+The tracker project has the full list and the configuration for each Unomi version:
+
+* link:https://github.com/apache/unomi-tracker/blob/main/README.md#upgrading-from-1x[Upgrading from 1.x]
+* link:https://github.com/apache/unomi-tracker/blob/main/CHANGES.md[Release notes]
 
 ==== Custom events
 
@@ -219,6 +247,8 @@ Integrating with tag managers such as Google Tag Manager is an important part of
 
 Personalization scripts should however be modified to check for the existence of the tracker object in the page because tag managers might deactivate scripts based on conditions such as GDPR approval, cookie preferences, ...
 
+[#_web_tracker_cookies]
+[[_cookiesession_handling]]
 ==== Cookie/session handling
 
 In order to track profiles, an identifier must be stored in the browser so that subsequent requests can keep a reference to the visitor's profile. Also, a session identifier must be generated to group the current visitor interactions.
@@ -259,6 +289,8 @@ Note that this is just an example, you could very well customize this code to cr
 
 ==== JavaScript API
 
-The JavaScript API for the web tracker is directly provided in the source code of the web tracker. You can find it here: https://github.com/apache/unomi-tracker/blob/main/src/apache-unomi-tracker.js
+The JavaScript API for the web tracker is in the tracker source: https://github.com/apache/unomi-tracker/blob/main/src/apache-unomi-tracker.js
+
+How to install it, how to configure it for each Unomi version, and what changed in 2.0 are in the tracker project: link:https://github.com/apache/unomi-tracker/blob/main/README.md[README]. The short version for an existing site is <<_upgrading_the_web_tracker,Upgrading the tracker from 1.x to 2.0>> above.
 
 Please note that only the functions that do NOT start with an underscore should be used. The ones that start with an underscore are not considered part of the public API and could change or even be removed at any point in the future.
