@@ -535,6 +535,34 @@ public class ProfileMergeIT extends BaseIT {
         assertPersonalizationStrategyStatus(profileMaster,  Arrays.asList(perso1true, perso2false, perso3true));
     }
 
+    /**
+     * Goes through the real merge strategy lookup, so a mismatch between interests.json, the merger
+     * definition and the blueprint service property would fall back to the default strategy and fail here.
+     */
+    @Test
+    public void testInterestsAreSummedByKeyOnMerge() throws InterruptedException {
+        keepTrying("interests property type should use sumByKeyMergeStrategy",
+                () -> profileService.getPropertyType("interests"),
+                propertyType -> propertyType != null && "sumByKeyMergeStrategy".equals(propertyType.getMergeStrategy()),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        Profile master = new Profile("interests-master-profile");
+        master.setProperty("interests", new ArrayList<>(Collections.singletonList(buildInterest("funds", 30))));
+        Profile other = new Profile("interests-other-profile");
+        other.setProperty("interests", new ArrayList<>(Arrays.asList(buildInterest("funds", 5), buildInterest("pension", 7))));
+
+        master = profileService.mergeProfiles(master, Collections.singletonList(other));
+
+        Assert.assertEquals(Arrays.asList(buildInterest("funds", 35), buildInterest("pension", 7)), master.getProperty("interests"));
+    }
+
+    private Map<String, Object> buildInterest(String key, int value) {
+        Map<String, Object> interest = new LinkedHashMap<>();
+        interest.put("key", key);
+        interest.put("value", value);
+        return interest;
+    }
+
     private Map<String, Object> buildPersonalizationStrategyStatus(String persoId, boolean inControlGroup) {
         Map<String, Object> personalizationStrategyStatus = new HashMap<>();
         personalizationStrategyStatus.put(PERSONALIZATION_STRATEGY_STATUS_ID, persoId);

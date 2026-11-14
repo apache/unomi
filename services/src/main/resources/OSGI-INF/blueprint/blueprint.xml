@@ -628,6 +628,14 @@
         </bean>
     </service>
 
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
+        <service-properties>
+            <entry key="propertyMergeStrategyExecutorId" value="sumByKeyPropertyMergeStrategyExecutor"/>
+        </service-properties>
+        <bean class="org.apache.unomi.services.mergers.SumByKeyPropertyMergeStrategyExecutor">
+        </bean>
+    </service>
+
     <service interface="org.apache.unomi.api.PersonalizationStrategy">
         <service-properties>
             <entry key="personalizationStrategyId" value="matching-first"/>

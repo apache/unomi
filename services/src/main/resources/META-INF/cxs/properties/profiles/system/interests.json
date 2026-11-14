@@ -1,0 +1,17 @@
+{
+    "metadata": {
+        "id": "interests",
+        "name": "Interests",
+        "systemTags": [
+            "properties",
+            "profileProperties",
+            "systemProfileProperties"
+        ]
+    },
+    "type": "json",
+    "defaultValue": "",
+    "automaticMappingsFrom": [ ],
+    "mergeStrategy": "sumByKeyMergeStrategy",
+    "multivalued": true,
+    "rank": "106.0"
+}

@@ -173,6 +173,8 @@ public class PropertyFilterUtils {
                         .type(inputObjectType)
                         .build());
             }
+        } else if ("json".equals(propertyType.getTypeId())) {
+            // String filters cannot match a JSON value (e.g. the nested properties.interests list), so none are generated.
         } else if ("geopoint".equals(propertyType.getTypeId())) {
 
             fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()

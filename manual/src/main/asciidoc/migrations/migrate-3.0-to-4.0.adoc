@@ -564,6 +564,8 @@ The sections above cover authentication and client-facing hardening. The lists b
 ==== Integrators / REST clients
 
 * Creating a profile without an `itemId` is refused.
+* Merging profiles adds the points of `properties.interests` by key. Previously the last profile's list replaced the others. Values that are not numbers are kept unchanged. See <<_property_types,Property Types>>.
+* `interests` is now a built-in profile property type of type `json`, so GraphQL lists it as an `interests` field on `CDP_Profile`, `CDP_Persona`, `CDP_PersonaInput` and `CDP_ProfileUpdateEventInput`. GraphQL no longer generates string filters (`_equals`, `_startsWith`, ...) for `json` properties, since they could not match a JSON value.
 * Condition validation failures on REST return a generic `badRequest` response. Detailed messages stay in the server log. See <<_condition_validation,Condition validation>>.
 * Public endpoints need a tenant public API key unless <<_v2_compatibility_mode,single-tenant compatibility mode>> is on (for clients written for Unomi 2 or Unomi 3). See <<_updating_applications_consuming_unomi,Updating applications consuming Unomi>> and the client-facing hardening notes above.
 * The Unomi web tracker 1.x cannot call a multi-tenant server. Use tracker 2.0.0 or later and set `apiKey`, or keep compatibility mode on. The script served at `/tracker/` is updated with the server. An npm install or a copied file is not. See <<_upgrading_the_web_tracker,Upgrading the tracker from 1.x to 2.0>>.

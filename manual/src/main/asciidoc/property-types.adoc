@@ -463,6 +463,9 @@ Common merge strategies include:
 * `oldestMergeStrategy` - Use the oldest value (for dates and timestamps)
 * `addMergeStrategy` - Add values together (for numeric types)
 * `nonEmptyMergeStrategy` - Prefer non-empty values
+* `sumByKeyMergeStrategy` - For a list of `{key, value}` objects, add `value` for entries that share a `key`. A `value` may be a number or a numeric string; entries that cannot be summed are kept unchanged
+
+The built-in profile property `interests` uses `sumByKeyMergeStrategy`.
 
 NOTE: The merge strategy identifier in property type JSON files should match the `id` field from the merge strategy definition JSON files located in the `META-INF/cxs/mergers/` directory (this is a file system path within plugin bundles, not an API endpoint).
 
