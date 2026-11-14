@@ -26,7 +26,9 @@ import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.segments.DependentMetadata;
 import org.apache.unomi.api.segments.Scoring;
+import org.apache.unomi.api.segments.ScoringElement;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.segments.SegmentsAndScores;
 import org.apache.unomi.api.services.EventService;
@@ -1399,6 +1401,51 @@ public class SegmentServiceImplTest {
             assertEquals(0, segmentService.getScoringMetadatas(pastEnd).getList().size());
 
             assertEquals(3, segmentService.getScoringMetadatas(0, 10, "properties.score:asc").getList().size());
+            return null;
+        });
+    }
+
+    /**
+     * UNOMI-1065: scorings with an empty or null element list must not break
+     * dependent-metadata walks that previously assumed elements.get(0) always exists.
+     */
+    @Test
+    public void testDependentMetadataToleratesScoringWithNoElements() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Form-style create uses an empty list (not null).
+            Scoring emptyElements = createTestScoring("empty-elements-score", "Empty Elements");
+            emptyElements.setElements(Collections.emptyList());
+            segmentService.setScoringDefinition(emptyElements);
+
+            Scoring withElements = createTestScoring("with-elements-score", "With Elements");
+            ScoringElement element = new ScoringElement();
+            element.setCondition(new Condition(definitionsService.getConditionType("matchAllCondition")));
+            element.setValue(1);
+            withElements.setElements(Collections.singletonList(element));
+            segmentService.setScoringDefinition(withElements);
+            persistenceService.refresh();
+
+            // Walks all scorings, including the empty-elements one.
+            DependentMetadata forScoring = segmentService.getScoringDependentMetadata("with-elements-score");
+            assertNotNull(forScoring);
+            assertTrue(forScoring.getSegments().isEmpty());
+            assertTrue(forScoring.getScorings().isEmpty());
+
+            DependentMetadata forEmpty = segmentService.getScoringDependentMetadata("empty-elements-score");
+            assertNotNull(forEmpty);
+
+            DependentMetadata forSegment = segmentService.getSegmentDependentMetadata("does-not-exist");
+            assertNotNull(forSegment);
+            assertTrue(forSegment.getSegments().isEmpty());
+            assertTrue(forSegment.getScorings().isEmpty());
+
+            // Null elements on a live cached scoring (same walk path).
+            Scoring cachedEmpty = segmentService.getScoringDefinition("empty-elements-score");
+            cachedEmpty.setElements(null);
+            DependentMetadata afterNull = segmentService.getScoringDependentMetadata("with-elements-score");
+            assertNotNull(afterNull);
+            DependentMetadata afterNullSegment = segmentService.getSegmentDependentMetadata("does-not-exist");
+            assertNotNull(afterNullSegment);
             return null;
         });
     }
