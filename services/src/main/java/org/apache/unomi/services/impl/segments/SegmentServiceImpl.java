@@ -510,7 +510,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
         Set<Scoring> impactedScorings = new HashSet<>();
         if (tenantScoring != null) {
             for (Scoring scoring : tenantScoring.values()) {
-                if (checkSegmentDeletionImpact(scoring.getElements().get(0).getCondition(), segmentId)) {
+                if (checkSegmentDeletionImpact(firstScoringElementCondition(scoring), segmentId)) {
                     impactedScorings.add(scoring);
                 }
             }
@@ -536,7 +536,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
 
         if (tenantScoring != null) {
             for (Scoring scoring : tenantScoring.values()) {
-                if (checkSegmentDeletionImpact(scoring.getElements().get(0).getCondition(), segmentId)) {
+                if (checkSegmentDeletionImpact(firstScoringElementCondition(scoring), segmentId)) {
                     scorings.add(scoring.getMetadata());
                 }
             }
@@ -899,12 +899,26 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
         Set<Scoring> impactedScorings = new HashSet<>();
         if (tenantScoring != null) {
             for (Scoring scoring : tenantScoring.values()) {
-                if (checkScoringDeletionImpact(scoring.getElements().get(0).getCondition(), scoringId)) {
+                if (checkScoringDeletionImpact(firstScoringElementCondition(scoring), scoringId)) {
                     impactedScorings.add(scoring);
                 }
             }
         }
         return impactedScorings;
+    }
+
+    /**
+     * Condition used when checking whether a scoring depends on another definition.
+     * Scorings with no elements (for example form-style create) have nothing to check.
+     * UNOMI-1065.
+     */
+    private Condition firstScoringElementCondition(Scoring scoring) {
+        List<ScoringElement> elements = scoring.getElements();
+        if (elements == null || elements.isEmpty()) {
+            return null;
+        }
+        ScoringElement first = elements.get(0);
+        return first != null ? first.getCondition() : null;
     }
 
     public DependentMetadata getScoringDependentMetadata(String scoringId) {
@@ -925,7 +939,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
 
         if (tenantScoring != null) {
             for (Scoring scoring : tenantScoring.values()) {
-                if (checkScoringDeletionImpact(scoring.getElements().get(0).getCondition(), scoringId)) {
+                if (checkScoringDeletionImpact(firstScoringElementCondition(scoring), scoringId)) {
                     scorings.add(scoring.getMetadata());
                 }
             }
