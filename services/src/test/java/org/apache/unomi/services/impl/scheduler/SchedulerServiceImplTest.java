@@ -625,17 +625,21 @@ public class SchedulerServiceImplTest {
                 assertNotNull(lockedTask.getLockOwner(), "Task should have lock owner");
                 assertNotNull(lockedTask.getLockDate(), "Task should have lock date");
 
-                // Test lock release - directly update task in persistence
-                lockedTask.setLockOwner(null);
-                lockedTask.setLockDate(null);
-                lockedTask.setLockLeaseMillis(0);
-                persistenceService.save(lockedTask);
-
-                // Refresh index to ensure changes are visible
-                persistenceService.refreshIndex(ScheduledTask.class);
-
-                // Get latest state and verify lock release
-                ScheduledTask releasedTask = persistenceService.load(lockTask.getItemId(), ScheduledTask.class);
+                // Let the task finish so the scheduler releases the lock. Clearing the lock in
+                // persistence while the executor is still running races that write: the executor
+                // can persist its lock owner again after the test's save, and the next load still
+                // sees the node id.
+                lockTaskRelease.countDown();
+                ScheduledTask releasedTask = null;
+                long releaseDeadline = System.currentTimeMillis() + TEST_TIMEOUT;
+                while (System.currentTimeMillis() < releaseDeadline) {
+                    releasedTask = persistenceService.load(lockTask.getItemId(), ScheduledTask.class);
+                    if (releasedTask != null && releasedTask.getLockOwner() == null) {
+                        break;
+                    }
+                    Thread.sleep(100);
+                }
+                assertNotNull(releasedTask, "Lock task should still be persisted");
                 assertNull(releasedTask.getLockOwner(), "Lock should be released");
             } finally {
                 lockTaskRelease.countDown();
