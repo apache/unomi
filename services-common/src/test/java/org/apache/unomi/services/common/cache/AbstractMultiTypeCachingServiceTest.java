@@ -427,6 +427,10 @@ public class AbstractMultiTypeCachingServiceTest {
      * Without the fix, saveItem() and refreshTypeCache() could interleave freely and the two race
      * scenarios this test would otherwise need to get lucky on (read-before-write, write-after-read)
      * would only manifest occasionally - here we force the interleaving deterministically instead.
+     * <p>
+     * Completion is checked with an explicit "refresh released" flag set before the refresh is allowed
+     * to leave its critical section. Do not use {@link Thread#isAlive()}: after the write lock is
+     * unlocked the refresh thread can still be alive briefly, which is not a lock violation.
      */
     @Test
     public void testSaveItemExcludedByConcurrentRefresh() throws Exception {
@@ -448,7 +452,12 @@ public class AbstractMultiTypeCachingServiceTest {
 
         CountDownLatch refreshHoldingLock = new CountDownLatch(1);
         CountDownLatch releaseRefresh = new CountDownLatch(1);
-        AtomicBoolean refreshStillRunningWhenSaveReturned = new AtomicBoolean(true);
+        // Marked true before the refresh is allowed to leave its write-lock critical section.
+        // saveItem() must observe this flag as true when it returns; Thread.isAlive() is not a
+        // substitute — after unlock the refresh thread can still be alive for a few instructions,
+        // which made the previous check flake under a loaded release build.
+        AtomicBoolean refreshReleased = new AtomicBoolean(false);
+        AtomicBoolean saveFinishedAfterRelease = new AtomicBoolean(false);
 
         // Stand-in for the persistence read inside refreshTypeCache(): signal that the refresh has
         // entered its critical section (and therefore holds the write lock), then block until the
@@ -468,7 +477,7 @@ public class AbstractMultiTypeCachingServiceTest {
 
         Thread saveThread = new Thread(() -> {
             testCachingService.callSaveItem(new TestItem("item1"));
-            refreshStillRunningWhenSaveReturned.set(refreshThread.isAlive());
+            saveFinishedAfterRelease.set(refreshReleased.get());
         });
         saveThread.start();
 
@@ -477,13 +486,14 @@ public class AbstractMultiTypeCachingServiceTest {
         saveThread.join(500);
         assertTrue("saveItem() should still be blocked while refresh holds the write lock", saveThread.isAlive());
 
+        refreshReleased.set(true);
         releaseRefresh.countDown();
         refreshThread.join(5000);
         saveThread.join(5000);
 
         assertFalse("saveThread should have finished", saveThread.isAlive());
-        assertFalse("saveItem() must not proceed until the concurrent refresh released its write lock",
-            refreshStillRunningWhenSaveReturned.get());
+        assertTrue("saveItem() must not proceed until the concurrent refresh released its write lock",
+            saveFinishedAfterRelease.get());
     }
 
     /**
