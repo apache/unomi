@@ -218,7 +218,7 @@ Notes:
 
 ==== JGitFlow
 
-You can use the https://jgitflow.bitbucket.org[JGitFlow Maven plugin] to work with feature, hotfix and other types of branches.
+You can use the https://jgitflow.bitbucket.io/[JGitFlow Maven plugin] to work with feature, hotfix and other types of branches.
 
 For example, to start a feature branch, simply use:
 

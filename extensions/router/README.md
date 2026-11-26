@@ -175,13 +175,13 @@ This extension is implemented using Apache Camel routes and can use Apache Kafka
     
    `file://directoryName[?options]`
     
-   See http://camel.apache.org/file2.html for more details.
+   See https://camel.apache.org/components/next/file-component.html for more details.
        
    `ftp://[username@]hostname[:port]/directoryname[?options]`
    `sftp://[username@]hostname[:port]/directoryname[?options]`
    `ftps://[username@]hostname[:port]/directoryname[?options]`
    
-   See http://camel.apache.org/ftp.html for more details.
+   See https://camel.apache.org/components/next/ftp-component.html for more details.
    
    `properties.period` is same as 'consumer.delay' option in the import source path
    

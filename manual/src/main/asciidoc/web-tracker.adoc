@@ -247,8 +247,7 @@ Integrating with tag managers such as Google Tag Manager is an important part of
 
 Personalization scripts should however be modified to check for the existence of the tracker object in the page because tag managers might deactivate scripts based on conditions such as GDPR approval, cookie preferences, ...
 
-[#_web_tracker_cookies]
-[[_cookiesession_handling]]
+[[_web_tracker_cookies]]
 ==== Cookie/session handling
 
 In order to track profiles, an identifier must be stored in the browser so that subsequent requests can keep a reference to the visitor's profile. Also, a session identifier must be generated to group the current visitor interactions.

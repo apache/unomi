@@ -130,5 +130,5 @@ Keep the Elasticsearch cluster until you are satisfied the OpenSearch deployment
 
 ===== Further help
 
-* Apache Unomi community: https://unomi.apache.org/community.html
+* Apache Unomi community: https://unomi.apache.org/community/
 * OpenSearch forum: https://forum.opensearch.org/
