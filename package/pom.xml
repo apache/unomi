@@ -158,22 +158,6 @@
                 <artifactId>maven-resources-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>filter-features-processing</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>copy-resources</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>${project.build.directory}/features-processing</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>${project.basedir}/src/main/karaf</directory>
-                                    <filtering>true</filtering>
-                                </resource>
-                            </resources>
-                        </configuration>
-                    </execution>
-                    <execution>
                         <id>process-resources</id>
                         <goals>
                             <goal>resources</goal>
@@ -356,7 +340,6 @@
                         <feature>unomi-groovy-actions</feature>
                         <feature>unomi-rest-ui</feature>
                     </bootFeatures>
-                    <featuresProcessing>${project.build.directory}/features-processing/org.apache.karaf.features.xml</featuresProcessing>
                     <javase>17</javase>
                 </configuration>
             </plugin>
