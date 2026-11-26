@@ -99,7 +99,7 @@ curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 The `requiredProfileProperties` and `requiredSessionProperties` are properties that take an array of property names
 that should be retrieved. In this case we use the wildcard character '*' to say we want to retrieve all the available
 properties. The structure of the JSON object that you should send is a JSON-serialized version of the 
-http://unomi.apache.org/unomi-api/apidocs/org/apache/unomi/api/ContextRequest.html[ContextRequest] Java class.
+https://unomi.apache.org/unomi-api/latest/apidocs/org/apache/unomi/api/ContextRequest.html[ContextRequest] Java class.
 
 Note that it is also possible to access a profile's data through the /cxs/profiles/ endpoint but that really should be
 reserved to administrative purposes. All public accesses should always use the /cxs/context.json endpoint for consistency
@@ -266,7 +266,7 @@ You can notice the following in the above schema:
 
 * We are creating a schema of type "events" ("self.target" equals "events")
 * The name of this schema is "contactInfoSubmitted", this MUST match the value of the "eventType" field in the event itself (below)
-* To simplify our schema declaration, we're referring to an already existing schema (https://unomi.apache.org/schemas/json/item/1-0-0) to validate the "source" and "target" properties. Apache Unomi ships with a set of predefined JSON Schemas, detailed here: https://github.com/apache/unomi/tree/master/extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas.
+* To simplify our schema declaration, we're referring to an already existing schema, `https://unomi.apache.org/schemas/json/item/1-0-0`, to validate the "source" and "target" properties. That address is the identifier stored with the schema. The file is https://github.com/apache/unomi/blob/master/extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas/items/item.json[item.json]. Apache Unomi ships with a set of predefined JSON Schemas, detailed here: https://github.com/apache/unomi/tree/master/extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas.
 * `"unevaluatedProperties": false` indicates that the event should be rejected if it contains any additional metadata.
 
 Finally, send the `contactInfoSubmitted` event using a request similar to this one:
