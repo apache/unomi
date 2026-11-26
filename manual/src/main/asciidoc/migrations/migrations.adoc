@@ -16,15 +16,15 @@ This section contains information and steps to migrate between major Unomi versi
 
 Use this decision guide to pick the right runbook:
 
-* **Unomi 2.x → 3.0** (platform): <<_migrate_from_2_x_to_3_0,Migrate from 2.x to 3.0>> (+ <<_migrate_from_elasticsearch_7_to_elasticsearch_9,ES7→ES9>> if needed)
-* **Unomi 3.0 → 4.0** (tenants / API keys / client hardening): <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>> (`unomi:migrate`); optional <<_v2_compatibility_mode,single-tenant compatibility mode>> for Unomi 2 or Unomi 3 clients; see also <<_client_facing_hardening_4_0,client-facing hardening>>
+* **Unomi 2.x → 3.0** (platform): <<_migrate_from_2_x_to_3_0,Migrate from 2.x to 3.0>> (+ <<_migrate_from_elasticsearch_7_to_elasticsearch_9,ES7→ES9>> if needed). Unomi 3.0.0 through 3.1.0 stay on Java 17, Karaf 4.4.8, and Elasticsearch 9.1.3.
+* **Unomi 3.0.x or 3.1.0 → 4.0** (same runtime, new pins, tenants / API keys / client hardening): <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>> (`unomi:migrate`); optional <<_v2_compatibility_mode,single-tenant compatibility mode>> for Unomi 2 or Unomi 3 clients; see also <<_client_facing_hardening_4_0,client-facing hardening>>
 * **Elasticsearch → OpenSearch** (same Unomi version, backend swap): <<_migrate_from_elasticsearch_to_opensearch,Migrate from Elasticsearch to OpenSearch>> (not `unomi:migrate`)
 
 [plantuml]
 ----
 @startuml
 skinparam shadowing false
-title Migration decision (Unomi 3.x)
+title Migration decision (Unomi 3.x to 4.0)
 
 start
 if (Changing Unomi version?) then (yes)
@@ -35,7 +35,7 @@ if (Changing Unomi version?) then (yes)
       :3.0 to 4.0 via unomi:migrate;
       :Optional single-tenant compatibility mode;
     endif
-  else (from 3.0)
+  else (from 3.0.x or 3.1.0)
     :3.0 to 4.0 via unomi:migrate;
     :Optional single-tenant compatibility mode;
   endif

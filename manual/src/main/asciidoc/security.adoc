@@ -144,7 +144,7 @@ end note
 @enduml
 ----
 
-Configuration keys live in `etc/org.apache.unomi.rest.authentication.cfg` and `custom.system.properties`. Tenant API key settings are in `etc/org.apache.unomi.tenant.cfg`.
+Configuration keys live in `etc/org.apache.unomi.rest.authentication.cfg` and `custom.system.properties`. API key reload intervals live in `etc/org.apache.unomi.services.cfg`.
 
 For tenant API keys, roles (`ROLE_UNOMI_TENANT_USER`, `ROLE_UNOMI_TENANT_ADMIN`, system administrator), operation permissions, and curl examples, see <<_multitenancy,Multi-tenancy>> and <<_configuration,Configuration>> (tenant management). For migrating Unomi 2 or Unomi 3 clients, see <<_v2_compatibility_mode,single-tenant compatibility mode>> and <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>>.
 

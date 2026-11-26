@@ -40,7 +40,7 @@ Password:
      / /| |/ /_/ / /  / /_/ / __/
     /_/ |_|\__,_/_/   \__,_/_/
 
-  Apache Karaf (4.2.15)
+  Apache Karaf (4.4.12)
 
 Hit '<tab>' for a list of available commands
 and '[cmd] --help' for help on a specific command.
@@ -142,9 +142,7 @@ binding (see <<_client_facing_hardening_4_0,client-facing hardening>>), and once
 caller may only write plain `properties.*` paths on the current profile; `targetId`, `systemProperties`, `segments`,
 `scores` and `consents` require a trusted caller (system administrator or tenant private key), and identity fields such
 as `itemId` are never writable. Refused names are skipped with a `WARN` log entry. Prefer custom events for public visitors. Again, prefer the
-custom events solution because as this is a
-protected event it will require sending trusted credentials, and as Unomi only supports a single key for the moment it
-could be problematic if the key is intercepted. But at least by using an event you will get the benefits of auditing and
+custom events solution because a protected event needs a trusted caller, and a private key that leaks can be used until you revoke it. But at least by using an event you will get the benefits of auditing and
 historical property modification tracing (see <<_request_tracing_explain,request tracing>>).
 
 Let's go into more detail about the preferred way to update a profile. Let's consider the following example of a rule:

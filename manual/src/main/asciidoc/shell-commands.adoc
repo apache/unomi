@@ -47,17 +47,18 @@ DESCRIPTION
     if no configuration is provided then questions will be prompted during the migration process.
 
 SYNTAX
-        unomi:migrate [fromVersionWithoutSuffix] [skipConfirmation]
+        unomi:migrate [originVersion] [skipConfirmation]
 
 ARGUMENTS
-        fromVersionWithoutSuffix
+        originVersion
                 Origin version without suffix/qualifier (e.g: 1.2.0)
-                (defaults to 1.2.0)
         skipConfirmation
                 Should the confirmation before starting the migration process be skipped ?
                 (defaults to false)
 
 ```
+
+The argument name is `originVersion`. The `1.2.0` text in the help line is an example, not a default. With no argument the command only lists scripts and stops. Pass the version you are leaving, without a qualifier. Scripts newer than that version run.
 ==== Lifecycle commands
 
 The commands control the lifecycle of the Apache Unomi server and are used to migrate, start or stop the server.
@@ -67,13 +68,12 @@ The commands control the lifecycle of the Apache Unomi server and are used to mi
 |Command|Arguments|Description
 
 |setup
-|distribution-feature-name,--force
-|This command must be used only when the Apache Unomi application is NOT STARTED. It will perform initial setup of the application
-using the specified distribution feature name (unomi-distribution-elasticsearch for example).
+|`-d` distribution, `-f` to replace an existing choice
+|This command must be used only when the Apache Unomi application is NOT STARTED. `-d` is required, for example `unomi:setup -d=unomi-distribution-elasticsearch`.
 
 |migrate
-|fromVersion
-|This command must be used only when the Apache Unomi application is NOT STARTED. It will perform migration of the data stored in search engine using the argument fromVersion as a starting point. Contributors writing new scripts should read <<_writing_migration_scripts,Writing migration scripts>>.
+|originVersion
+|This command must be used only when the Apache Unomi application is NOT STARTED. Pass the version you are leaving, without a qualifier. Scripts newer than that version run. Omitting it only lists the scripts. Contributors writing new scripts should read <<_writing_migration_scripts,Writing migration scripts>>.
 
 |stop
 |n/a
@@ -81,7 +81,7 @@ using the specified distribution feature name (unomi-distribution-elasticsearch 
 
 |start
 |n/a
-|Starts the Apache Unomi application with the specified distribution (or by default unomi-distribution-elasticsearch). Note that this state will be remembered between Apache Karaf launches, so in general it is only needed after a first installation
+|Starts Apache Unomi. It takes no distribution argument. The distribution comes from `unomi:setup` or `UNOMI_DISTRIBUTION`, and Elasticsearch is the default. The choice is remembered between Karaf launches, so this is only needed after a first installation
 
 |version
 |n/a
@@ -139,7 +139,7 @@ created, EXECUTE means the rule's actions are being executed.
 |[bundleId] [type] [fileName]
 |This command can be used to force redeployment of definitions from bundles. By default existing definitions will not
 be overriden unless they come from SNAPSHOT bundles. Using this command you can override this mechanism. Here are some
-examples of using this command: `unomi:deploy-definition 175 rule *` will redeploy all the rules provided by bundle with
+examples of using this command: `unomi:deploy-definition 175 rules *` will redeploy all the rules provided by bundle with
 id 175. If you launch the command without any arguments you will get prompts for what you want to deploy from which bundle.
 If you want to deploy all the definitions of a bundle you can also use wildcards such as in the following example: `deploy-definition 175 * *`.
 It is also possible to give no argument to this command and it will then interactively request the definitions you want

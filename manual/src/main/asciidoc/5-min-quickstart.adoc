@@ -15,11 +15,7 @@
 [#_five_minutes_quickstart]
 === Quick start with Docker
 
-Begin by creating a `docker-compose.yml` file. You can choose between Elasticsearch or OpenSearch:
-
-==== Option 1: Using Elasticsearch
-
-Export the passwords first. The compose files read them from your shell, and the `curl` commands
+Export the passwords first. The compose file reads them from your shell, and the `curl` commands
 further down use the same variables, so setting them once here keeps both consistent. Unomi refuses
 to start if they are unset.
 
@@ -29,39 +25,50 @@ export UNOMI_ROOT_PASSWORD='choose-a-strong-password'
 export UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password'
 ----
 
+Create a `docker-compose.yml` file. You can choose between Elasticsearch or OpenSearch.
+
+==== Option 1: Using Elasticsearch
+
+Elasticsearch 8 and later enables security and HTTPS unless you turn them off. The Unomi image
+checks the cluster over plain HTTP and does not send Elasticsearch credentials, so this quick start
+disables Elasticsearch security. `UNOMI_AUTO_START=true` is required for the published `4.0.0` image:
+without it, Karaf starts and the Unomi features stay stopped.
+
 [source,yaml]
 ----
-version: '3.8'
 services:
     elasticsearch:
         image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
         environment:
             - discovery.type=single-node
+            - xpack.security.enabled=false
+            - cluster.name=contextElasticSearch
+            - "ES_JAVA_OPTS=-Xms1G -Xmx1G"
         ports:
             - 9200:9200
     unomi:
-        # Unomi version can be updated based on your needs
         image: apache/unomi:4.0.0
         environment:
+            - UNOMI_AUTO_START=true
+            - UNOMI_DISTRIBUTION=unomi-distribution-elasticsearch
             - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
-            - UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES=0.0.0.0/0,::1,127.0.0.1
             - UNOMI_ROOT_PASSWORD=${UNOMI_ROOT_PASSWORD}
             - UNOMI_HEALTHCHECK_PASSWORD=${UNOMI_HEALTHCHECK_PASSWORD}
         ports:
             - 8181:8181
             - 9443:9443
             - 8102:8102
-        links:
-            - elasticsearch
         depends_on:
             - elasticsearch
 ----
 
 ==== Option 2: Using OpenSearch
 
+Set `UNOMI_AUTO_START=true` here as well. The published `4.0.0` image does not start the Unomi
+features unless that variable is exactly `true`.
+
 [source,yaml]
 ----
-version: '3.8'
 services:
     opensearch-node1:
         image: opensearchproject/opensearch:3.7.0
@@ -88,6 +95,7 @@ services:
     unomi:
         image: apache/unomi:4.0.0
         environment:
+            - UNOMI_AUTO_START=true
             - UNOMI_DISTRIBUTION=unomi-distribution-opensearch
             - UNOMI_OPENSEARCH_ADDRESSES=opensearch-node1:9200
             - UNOMI_OPENSEARCH_USERNAME=admin
@@ -109,7 +117,14 @@ volumes:
     opensearch-data1:
 ----
 
-From the same folder, start the environment using `docker-compose up` and wait for the startup to complete.
+From the same folder, start the environment using `docker compose up` and wait for the startup to complete. The first start takes a few minutes. For the Elasticsearch option, `curl http://localhost:9200/_cluster/health` reports `yellow` or `green` when the cluster is ready. Unomi is ready when the health check answers (the `health` user, not `karaf`):
+
+[source,bash]
+----
+curl --user "health:${UNOMI_HEALTHCHECK_PASSWORD}" http://localhost:8181/health/check
+----
+
+Create the default tenant below before opening `/cxs/cluster`. Until that tenant exists, the call reports that the admin tenant is missing.
 
 ==== After startup (Elasticsearch Docker path)
 
@@ -148,8 +163,12 @@ Try accessing https://localhost:9443/cxs/cluster with username/password: `karaf`
 
 [source,yaml]
 ----
-cluster.name: contextElasticsearch
+cluster.name: contextElasticSearch
+discovery.type: single-node
+xpack.security.enabled: false
 ----
+
+Elasticsearch 9 enables security and HTTPS by default. Unomi connects over HTTP without credentials, so this quick start turns security off. Leave it on only if you also set `org.apache.unomi.elasticsearch.username`, `org.apache.unomi.elasticsearch.password` and `org.apache.unomi.elasticsearch.sslEnable=true`.
 
 4) Launch Elasticsearch using : `bin/elasticsearch`
 
@@ -167,7 +186,20 @@ cluster.name: opensearch-cluster
 discovery.type: single-node
 ----
 
-4) Launch OpenSearch using: `bin/opensearch`
+4) OpenSearch rejects a weak password such as `admin`. Set one, then launch OpenSearch with `bin/opensearch`:
+
+[source,bash]
+----
+export OPENSEARCH_INITIAL_ADMIN_PASSWORD='MyStrongPassw0rd!'
+bin/opensearch
+----
+
+4b) Before starting Unomi, export that same password so the client can sign in:
+
+[source,bash]
+----
+export UNOMI_OPENSEARCH_PASSWORD='MyStrongPassw0rd!'
+----
 
 ==== Complete the Setup
 
@@ -195,9 +227,7 @@ which determines which set of features and bundles are installed and started. A 
 
 8) Wait for startup to complete
 
-9) Try accessing https://localhost:9443/cxs/cluster with username/password: `karaf` / your `UNOMI_ROOT_PASSWORD` . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
-
-10) Create a tenant that will own all your data, then regenerate keys and store `plainTextKey`:
+9) Create a tenant that will own all your data, then regenerate keys and store `plainTextKey`:
 
 [source,bash]
 ----
@@ -218,6 +248,8 @@ curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PRIVATE" --
 
 Save the `plainTextKey` values from the key-creation responses — you'll need them for API calls.
 
+10) Try accessing https://localhost:9443/cxs/cluster with username/password: `karaf` / your `UNOMI_ROOT_PASSWORD` . You might get a certificate warning in your browser, just accept it despite the warning it is safe. This call reports that the admin tenant is missing until step 9 has created it.
+
 11) Request your first context:
 
 [source,bash]
@@ -234,10 +266,7 @@ curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
   }'
 ----
 
-Or access it directly in a browser (requires API key in header):
-`http://localhost:8181/cxs/context.js?sessionId=1234`
-
-NOTE: For the context request to work, you'll need to include the public API key from step 10 in the request header: `X-Unomi-Api-Key: <YOUR_PUBLIC_API_KEY>`
+A browser address bar cannot send `X-Unomi-Api-Key`, so use the curl command above with the public key from step 9.
 
 12) If something goes wrong, you should check the logs in `./data/log/karaf.log`. If you get errors on the search engine,
 make sure you are using the proper version.

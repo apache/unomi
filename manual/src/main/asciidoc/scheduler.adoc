@@ -618,8 +618,10 @@ Scheduler settings live in `etc/org.apache.unomi.services.cfg` (OSGi PID `org.ap
 |`scheduler.executorNode` |`true` |Whether this node runs tasks. Set `false` on dedicated REST-only nodes if you split roles.
 |`scheduler.lockTimeout` |`10000` |Lock timeout in milliseconds
 |`scheduler.purgeTaskEnabled` |`true` |Enables the built-in periodic purge of old completed tasks
-|`task.purge.completedTaskTtlDays` |`30` |Age in days after which completed tasks may be purged
+|`scheduler.completedTaskTtlDays` |`30` |Age in days after which completed tasks may be purged
 |===
+
+`scheduler.executorNode` and `scheduler.completedTaskTtlDays` are defaults in the services blueprint. The shipped `etc/org.apache.unomi.services.cfg` does not list them; add the lines there to override the defaults. The key `task.purge.completedTaskTtlDays` in that file is not read by the scheduler.
 
 .Example: dedicated executor node in a 3-node cluster
 

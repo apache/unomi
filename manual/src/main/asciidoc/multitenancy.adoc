@@ -155,9 +155,10 @@ curl http://localhost:8181/cxs/context.json \
 
 [source,bash]
 ----
-curl -X GET http://localhost:8181/cxs/profiles \
+curl -X POST http://localhost:8181/cxs/profiles/search \
   --user "TENANT_ID:PRIVATE_KEY" \
-  -H "Content-Type: application/json"
+  -H "Content-Type: application/json" \
+  -d '{"offset": 0, "limit": 20}'
 ----
 
 ==== Configuration
@@ -179,34 +180,9 @@ In 4.0 this setting only applies to JAAS admin requests. <<_v2_compatibility_mod
 does not use it yet: its REST requests always run on tenant `default`, so keep the setting at `default` while that mode
 is on, or GraphQL admin queries will work on a different tenant than REST.
 
-Other tenant-related settings live in `etc/org.apache.unomi.tenant.cfg`:
+A new API key does not expire. Pass `validityDays` when regenerating one, for example `POST /cxs/tenants/{tenantId}/apikeys?type=PUBLIC&validityDays=30`. How often a node reloads keys is `org.apache.unomi.tenant.apikey.refresh.interval` in `etc/org.apache.unomi.services.cfg` (see the table further down).
 
-[source,properties]
-----
-# API key validity period
-tenant.apikey.validity.period=30
-tenant.apikey.validity.unit=DAYS
-
-# Warn this many days before an API key expires
-tenant.apikey.rotation.warning.days=7
-
-# Prefix for tenant-specific security roles
-tenant.security.roles.prefix=unomi_tenant_
-----
-
-===== Security Provider Configuration
-
-For Elasticsearch:
-[source,properties]
-----
-tenant.security.provider=elasticsearch
-----
-
-For OpenSearch:
-[source,properties]
-----
-tenant.security.provider=opensearch
-----
+The source tree contains `etc/org.apache.unomi.tenant.cfg`, with `tenant.apikey.*` and `tenant.security.*` keys. That file is not installed with the distribution, and no code reads those keys. Tenant roles are `ROLE_UNOMI_TENANT_USER_` and `ROLE_UNOMI_TENANT_ADMIN_` followed by the tenant id.
 
 ==== Security Model
 
@@ -218,106 +194,35 @@ Apache Unomi implements a hierarchical role-based access control (RBAC) system. 
 * `ROLE_UNOMI_ADMIN`: Administrative access across the platform
 * `ROLE_UNOMI_TENANT_USER`: Basic tenant access for public operations
 * `ROLE_UNOMI_TENANT_ADMIN`: Extended tenant access for private operations
-* `ROLE_UNOMI_TENANT_PUBLIC_PREFIX_*`: Tenant-specific public roles
-* `ROLE_UNOMI_TENANT_PRIVATE_PREFIX_*`: Tenant-specific private roles
+* `ROLE_UNOMI_TENANT_USER_` followed by the tenant id
+* `ROLE_UNOMI_TENANT_ADMIN_` followed by the tenant id
 
-Configure system roles in `etc/org.apache.unomi.security.cfg`:
+The security service is configured by the PID `org.apache.unomi.security`. The property it reads from `etc/org.apache.unomi.security.cfg` is `enableEncryption` (default `false`). The system roles attached to the service are set in the blueprint: `ROLE_UNOMI_SYSTEM`, `ROLE_UNOMI_ADMIN`, `ROLE_UNOMI_TENANT_ADMIN`, and `ROLE_SYSTEM_MAINTENANCE`.
 
-[source,properties]
-----
-# Define system roles
-systemRoles=ROLE_UNOMI_SYSTEM,ROLE_UNOMI_ADMIN
-
-# Enable encryption for sensitive data
-enableEncryption=false
-
-# Operation role mappings
-operation.roles.QUERY=ROLE_UNOMI_TENANT_USER,ROLE_UNOMI_TENANT_ADMIN
-operation.roles.PROFILE_UPDATE=ROLE_UNOMI_TENANT_ADMIN
-operation.roles.SYSTEM_MAINTENANCE=ROLE_UNOMI_SYSTEM
-operation.roles.TENANT_MANAGEMENT=ROLE_UNOMI_ADMIN
-operation.roles.DECRYPT_PROFILE_DATA=ROLE_UNOMI_TENANT_ADMIN
-operation.roles.SEGMENT_UPDATE=ROLE_UNOMI_TENANT_ADMIN
-operation.roles.RULE_UPDATE=ROLE_UNOMI_TENANT_ADMIN
-----
-
-The configuration uses the format `operation.roles.OPERATION_NAME=ROLE1,ROLE2,...` where:
-- `OPERATION_NAME` is the uppercase operation identifier
-- Multiple roles are comma-separated
-- Changes take effect immediately without restart
-
-===== Operation Configuration
-
-Operations in Unomi can be customized to require specific roles. This is configured through OSGi configuration files.
-
-====== Configuration File
-
-Create or modify the file `etc/org.apache.unomi.security.cfg`:
-
-[source,properties]
-----
-# Define system roles
-systemRoles=ROLE_UNOMI_SYSTEM,ROLE_UNOMI_ADMIN
-
-# Enable encryption for sensitive data
-enableEncryption=false
-
-# Operation role mappings
-operation.roles.QUERY=ROLE_UNOMI_TENANT_USER,ROLE_UNOMI_TENANT_ADMIN
-operation.roles.PROFILE_UPDATE=ROLE_UNOMI_TENANT_ADMIN
-operation.roles.SYSTEM_MAINTENANCE=ROLE_UNOMI_SYSTEM
-operation.roles.TENANT_MANAGEMENT=ROLE_UNOMI_ADMIN
-operation.roles.DECRYPT_PROFILE_DATA=ROLE_UNOMI_TENANT_ADMIN
-operation.roles.SEGMENT_UPDATE=ROLE_UNOMI_TENANT_ADMIN
-operation.roles.RULE_UPDATE=ROLE_UNOMI_TENANT_ADMIN
-----
-
-The configuration uses the format `operation.roles.OPERATION_NAME=ROLE1,ROLE2,...` where:
-- `OPERATION_NAME` is the uppercase operation identifier
-- Multiple roles are comma-separated
-- Changes take effect immediately without restart
-
-====== Common Operations
-
-Here are some common operations and their typical role requirements:
+Permission names and the roles allowed to use them are fixed in `SecurityServiceConfiguration`. There is no `operation.roles.*` key, and `SecurityService` has no `validateTenantOperation` method. Code checks access with `hasRole`, `hasPermission`, and `hasTenantAccess`.
 
 [options="header"]
 |===
-|Operation |Description |Default Required Roles
-|QUERY |Basic data querying |ROLE_UNOMI_TENANT_USER, ROLE_UNOMI_TENANT_ADMIN
-|PROFILE_UPDATE |Update profile data |ROLE_UNOMI_TENANT_ADMIN
-|SYSTEM_MAINTENANCE |System-level operations |ROLE_UNOMI_SYSTEM
-|TENANT_MANAGEMENT |Tenant administration |ROLE_UNOMI_ADMIN
-|DECRYPT_PROFILE_DATA |Access to encrypted profile data |ROLE_UNOMI_TENANT_ADMIN
-|SEGMENT_UPDATE |Update user segments |ROLE_UNOMI_TENANT_ADMIN
-|RULE_UPDATE |Update business rules |ROLE_UNOMI_TENANT_ADMIN
+|Permission |Default roles
+
+|QUERY, AGGREGATE, SCROLL_QUERY, SAVE, UPDATE, DELETE, REMOVE_BY_QUERY
+|ROLE_UNOMI_TENANT_USER, ROLE_UNOMI_TENANT_ADMIN
+
+|PURGE
+|ROLE_SYSTEM_MAINTENANCE, ROLE_UNOMI_TENANT_ADMIN
+
+|SYSTEM_MAINTENANCE
+|ROLE_SYSTEM_MAINTENANCE
+
+|ENCRYPT_PROFILE_DATA
+|ROLE_UNOMI_PROFILE_ENCRYPT
+
+|DECRYPT_PROFILE_DATA
+|ROLE_UNOMI_PROFILE_DECRYPT
+
+|SCHEMA_WRITE, SCHEMA_DELETE
+|ROLE_UNOMI_TENANT_ADMIN
 |===
-
-====== Custom Operations
-
-To define custom operations:
-
-1. Define the operation name (use uppercase by convention)
-2. Add the operation-role mapping to the configuration file
-3. Use `securityService.validateTenantOperation()` to enforce the permission
-
-Example:
-
-1. Add to `etc/org.apache.unomi.security.cfg`:
-+
-[source,properties]
-----
-operation.roles.CUSTOM_OPERATION=ROLE_UNOMI_TENANT_ADMIN
-----
-+
-2. Use in your code:
-[source,java]
-----
-public void performCustomOperation() {
-    securityService.validateTenantOperation("CUSTOM_OPERATION");
-    // Operation implementation
-}
-----
 
 ===== Subjects and Authentication
 
@@ -343,8 +248,12 @@ Example of subject creation:
 [source,java]
 ----
 Subject tenantSubject = new Subject();
-tenantSubject.getPrincipals().add(new UserPrincipal("tenant-id"));
+tenantSubject.getPrincipals().add(new TenantPrincipal("my-tenant"));
+tenantSubject.getPrincipals().add(new UserPrincipal("my-tenant"));
 tenantSubject.getPrincipals().add(new RolePrincipal("ROLE_UNOMI_TENANT_ADMIN"));
+tenantSubject.getPrincipals().add(new RolePrincipal("ROLE_UNOMI_TENANT_ADMIN_my-tenant"));
+tenantSubject.getPrincipals().add(new RolePrincipal("ROLE_UNOMI_TENANT_USER"));
+tenantSubject.getPrincipals().add(new RolePrincipal("ROLE_UNOMI_TENANT_USER_my-tenant"));
 ----
 
 ===== Tenant-Role Relationship
@@ -371,12 +280,12 @@ Example of operation validation:
 
 [source,java]
 ----
-// Validate a tenant operation
-securityService.validateTenantOperation("SYSTEM_MAINTENANCE");
+if (!securityService.hasPermission("SYSTEM_MAINTENANCE")) {
+    // refuse the operation
+}
 
-// Execute with elevated privileges
-securityService.executeAsSystemSubject(() -> {
-    // Perform system operation
+securityService.executeWithPrivilegedSubject(securityService.getSystemSubject(), () -> {
+    // privileged work
 });
 ----
 
@@ -398,7 +307,7 @@ securityService.executeAsSystemSubject(() -> {
 * Monitor failed authentication attempts
 
 4. Operation Execution:
-* Use `executeAsSystemSubject` for system operations
+* Use `executeWithPrivilegedSubject` with `getSystemSubject()` for system operations
 * Validate operations before execution
 * Maintain proper audit trails
 
@@ -532,10 +441,10 @@ There is no REST endpoint to copy data between tenants. Version upgrades that in
 
 [source,bash]
 ----
-unomi:migrate 3.0.0
+unomi:migrate 3.1.0
 ----
 
-See <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>> and <<_shell_commands,Shell commands>>.
+Pass the version you are leaving: `3.0.0`, `3.0.1`, or `3.1.0`. Scripts newer than that version run. See <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>> and <<_shell_commands,Shell commands>>.
 
 ==== Best Practices
 
@@ -596,10 +505,10 @@ To attach existing 3.0 data to the multi-tenant model when upgrading to 4.0:
 +
 [source,bash]
 ----
-unomi:migrate 3.0.0
+unomi:migrate 3.1.0
 ----
 +
-This runs the `migrate-4.0.0-*` Groovy scripts (tenant document IDs, system item IDs, default tenant initialization, legacy queryBuilder IDs, and related fixes). See <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>>.
+Pass `3.0.0`, `3.0.1`, or `3.1.0`, whichever you are leaving. This runs the `migrate-4.0.0-*` Groovy scripts (tenant document IDs, system item IDs, default tenant initialization, legacy queryBuilder IDs, and related fixes). See <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>>.
 3. Start Unomi 4.0 and regenerate tenant API keys if you need the plaintext secrets (create/migrate responses only expose masked keys). See <<_multitenancy,Creating Your First Tenant>> / API key regeneration below.
 
 ===== Verification
@@ -614,9 +523,10 @@ curl -X GET http://localhost:8181/cxs/tenants \
   -H "Accept: application/json"
 
 # List profiles for a tenant (tenant private key auth)
-curl -X GET http://localhost:8181/cxs/profiles \
+curl -X POST http://localhost:8181/cxs/profiles/search \
   --user "TENANT_ID:PRIVATE_KEY" \
-  -H "Accept: application/json"
+  -H "Content-Type: application/json" \
+  -d '{"offset": 0, "limit": 20}'
 ----
 
 ==== Working with Events and Rules

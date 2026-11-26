@@ -168,7 +168,9 @@ cloud "External search engines" <<external>> {
 @enduml
 ----
 
-===== Current version pins (Unomi 4.0 baseline)
+===== Current version pins (Unomi 4.0.0)
+
+Unomi 3.0.0 through 3.1.0 shipped Karaf 4.4.8 and Elasticsearch 9.1.3, with no OpenSearch module. The table is the 4.0.0 release. `opensearch.rest.client.version` is the REST client library and is not the cluster version.
 
 [cols="1,1,2", options="header"]
 |===
@@ -179,7 +181,7 @@ cloud "External search engines" <<external>> {
 | Root `pom.xml`, `package/pom.xml` (`javase`)
 
 | `karaf.version`
-| 4.4.11
+| 4.4.12
 | `pom.xml`, `setenv.sh`, `itests/pom.xml`, `*/karaf-kar/pom.xml`
 
 | `cxf.version`
@@ -187,7 +189,7 @@ cloud "External search engines" <<external>> {
 | `pom.xml`, `bom/pom.xml`, `kar/.../feature.xml`
 
 | `jackson.version`
-| 2.18.3
+| 2.18.10
 | `pom.xml`, `bom/pom.xml`, `kar/.../feature.xml`
 
 | `jetty.version`
@@ -207,8 +209,8 @@ cloud "External search engines" <<external>> {
 | `pom.xml`, `bom/pom.xml`, OS Docker compose, IT OS image
 
 | `opensearch.rest.client.version`
-| 3.7.0
-| `pom.xml` (keep in sync with `opensearch.version`)
+| 3.9.0
+| `pom.xml` (REST client library; the cluster pin stays `opensearch.version` 3.7.0)
 
 | `log4j.version`
 | 2.24.0
@@ -305,6 +307,10 @@ Split platform work into focused commits when possible:
 | PR3 #796 | `545f6b8af`…
 | Karaf 4.4.11 / ES 9.4 / OS 3.7
 | slf4j-api; Jackson/Jetty cascade; codec optional imports; IT lazy JSON mapper (no static init in probe)
+
+| UNOMI-988 | `68aec95a4`
+| Karaf 4.4.12
+| Shipped pin in Unomi 4.0.0. Unomi 3.0.0 through 3.1.0 stayed on 4.4.8.
 |===
 
 ===== Pre-merge checklist

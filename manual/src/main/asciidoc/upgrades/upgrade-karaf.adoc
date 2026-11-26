@@ -28,7 +28,7 @@ TIP: JIRA context for prerequisites (Cellar removal, CXF 3.x ceiling, UNOMI-876 
 | JDK, feature namespace, WAB/Pax Web, ~187 POMs, CXF/Jackson/Jetty, full IT matrix
 
 | *Minor / patch*
-| 4.4.8 → 4.4.11 (UNOMI-875 PR3)
+| 4.4.8 → 4.4.12 (UNOMI-875 PR3 landed on 4.4.11; UNOMI-988 shipped 4.4.12)
 | `karaf.version`, cascade library pins, compile fallout (e.g. slf4j), feature verify, IT probe fixes
 
 | *Config-only*

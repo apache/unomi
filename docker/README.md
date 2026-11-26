@@ -55,7 +55,7 @@ docker network create unomi
 docker run -d --name elasticsearch --net unomi -p 9200:9200 -p 9300:9300 \
     -e "discovery.type=single-node" \
     -e "xpack.security.enabled=false" \
-    -e cluster.name=contextElasticSearch \ 
+    -e "cluster.name=contextElasticSearch" \
     docker.elastic.co/elasticsearch/elasticsearch:9.4.3
 ```
 
@@ -74,52 +74,64 @@ docker run -d --name opensearch --net unomi -p 9200:9200 -p 9300:9300 \
 For Unomi (with ElasticSearch):
 
 ```bash
-docker pull apache/unomi:4.0.0-SNAPSHOT
+docker pull apache/unomi:4.0.0
 docker run -d --name unomi --net unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
+    -e UNOMI_AUTO_START=true \
     -e UNOMI_ROOT_PASSWORD='choose-a-strong-password' \
     -e UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password' \
     -e UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200 \
-    apache/unomi:4.0.0-SNAPSHOT
+    apache/unomi:4.0.0
 ```
+
+`UNOMI_AUTO_START=true` is required for the published `4.0.0` image. Images built after the entrypoint default change start the features when the variable is unset, but setting it keeps both images on the same path.
 
 For Unomi (with OpenSearch):
 
 ```bash
-docker pull apache/unomi:4.0.0-SNAPSHOT
+docker pull apache/unomi:4.0.0
 docker run -d --name unomi --net unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
+    -e UNOMI_AUTO_START=true \
     -e UNOMI_ROOT_PASSWORD='choose-a-strong-password' \
     -e UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password' \
     -e UNOMI_DISTRIBUTION=unomi-distribution-opensearch \
     -e UNOMI_OPENSEARCH_ADDRESSES=opensearch:9200 \
+    -e UNOMI_OPENSEARCH_USERNAME=admin \
     -e UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD} \
-    apache/unomi:4.0.0-SNAPSHOT
+    -e UNOMI_OPENSEARCH_SSL_ENABLE=true \
+    -e UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES=true \
+    apache/unomi:4.0.0
 ```
 
-## Using a host OS Search Engine installation (only supported on macOS & Windows)
+## Using a search engine installed on the host
 
 For ElasticSearch:
 
 ```bash
 docker run -d --name unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
+    -e UNOMI_AUTO_START=true \
     -e UNOMI_ROOT_PASSWORD='choose-a-strong-password' \
     -e UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password' \
     -e UNOMI_ELASTICSEARCH_ADDRESSES=host.docker.internal:9200 \
-    apache/unomi:4.0.0-SNAPSHOT
+    apache/unomi:4.0.0
 ```
 
 For OpenSearch:
 
 ```bash
 docker run -d --name unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
+    -e UNOMI_AUTO_START=true \
     -e UNOMI_ROOT_PASSWORD='choose-a-strong-password' \
     -e UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password' \
     -e UNOMI_DISTRIBUTION=unomi-distribution-opensearch \
     -e UNOMI_OPENSEARCH_ADDRESSES=host.docker.internal:9200 \
+    -e UNOMI_OPENSEARCH_USERNAME=admin \
     -e UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD} \
-    apache/unomi:4.0.0-SNAPSHOT
+    -e UNOMI_OPENSEARCH_SSL_ENABLE=true \
+    -e UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES=true \
+    apache/unomi:4.0.0
 ```
 
-Note: Linux doesn't support the host.docker.internal DNS lookup method yet, it should be available in an upcoming version of Docker. See https://github.com/docker/for-linux/issues/264
+Docker Desktop resolves `host.docker.internal` on its own. Docker Engine on Linux needs the host added explicitly: `--add-host=host.docker.internal:host-gateway`.
 
 ## Environment Variables
 
@@ -172,7 +184,14 @@ curl -X POST http://localhost:8181/cxs/tenants \
   -d '{"requestedId":"default","properties":{"name":"Default Tenant"}}'
 ```
 
-Save the public and private API keys from the response. Use the public key in the `X-Unomi-Api-Key` header for public endpoints.
+Creating a tenant returns masked keys only. Regenerate the keys and save `plainTextKey` from those responses:
+
+```bash
+curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PUBLIC" --user "karaf:${UNOMI_ROOT_PASSWORD}"
+curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PRIVATE" --user "karaf:${UNOMI_ROOT_PASSWORD}"
+```
+
+Use the public `plainTextKey` in the `X-Unomi-Api-Key` header for public endpoints.
 
 See the [Multi-tenancy](https://github.com/apache/unomi/blob/master/manual/src/main/asciidoc/multitenancy.adoc) chapter in the manual for details.
 
@@ -181,4 +200,15 @@ See the [Multi-tenancy](https://github.com/apache/unomi/blob/master/manual/src/m
 If you want to rebuild the images or use docker compose directly, you must still first use `mvn clean install` to generate
 the filtered project in `target/filtered-docker`.
 
-You can then use `docker compose -f docker-compose-es.yml up` to start the project with ElasticSearch or `docker compose -f docker-compose-os.yml up` to start the project with OpenSearch.
+From the `docker` module directory, with `UNOMI_ROOT_PASSWORD` and `UNOMI_HEALTHCHECK_PASSWORD` exported:
+
+```bash
+docker compose -f target/filtered-docker/docker-compose-es.yml up
+```
+
+The OpenSearch file also needs `OPENSEARCH_INITIAL_ADMIN_PASSWORD` (OpenSearch rejects `admin`):
+
+```bash
+export OPENSEARCH_INITIAL_ADMIN_PASSWORD='MyStrongPassw0rd!'
+docker compose -f target/filtered-docker/docker-compose-os.yml up
+```

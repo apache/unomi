@@ -144,7 +144,7 @@ source tree:
 [source,bash]
 ----
 cd samples/login-integration
-KARAF_HOME=../../package/target/unomi-4.0.0-SNAPSHOT ./setup.sh
+KARAF_HOME=../../package/target/unomi-4.0.1-SNAPSHOT ./setup.sh
 ----
 
 The script validates this before changing anything, and refuses to continue if the directory does not

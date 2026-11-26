@@ -37,16 +37,15 @@ them at your own risks.
 
 Apache Unomi supports two search engine backends:
 
-* *Elasticsearch*: Version **9.x** (for example 9.4.3) is required for Unomi 3.0 and later. Version 7.17.5 applies only to Unomi 2.x.
-* *OpenSearch*: Version **3.7.0** (matching `opensearch.version` in the Unomi root POM) is supported starting with Unomi 4.0
+* *Elasticsearch*: Unomi 4.0.0 is tested with **9.4.3**. Unomi 3.0.0 through 3.1.0 pin **9.1.3**. The persistence service accepts **9.0.3** or later. Unomi 2.0 through 2.7 pin **7.4.2**.
+* *OpenSearch*: Version **3.7.0** (matching `opensearch.version` in the Unomi root POM) is supported starting with Unomi 4.0. Unomi 3.x has no OpenSearch module.
 
 It is highly recommended to use the versions specified in the documentation. When in doubt, consult the Apache Unomi community
 for the latest compatibility information.
 
 Note for OpenSearch users:
 - Security is enabled by default and requires SSL/TLS
-- Default admin credentials are required (username: admin)
-- The initial admin password can be configured via environment variable
+- Sign in as user `admin`. Set `OPENSEARCH_INITIAL_ADMIN_PASSWORD` before the first start. OpenSearch rejects the password `admin`
 
 ==== Running Unomi
 

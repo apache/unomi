@@ -32,7 +32,7 @@ This authentication requirement ensures proper access control and security when 
 One of the solutions to this scenario is to have the ability to control and pass in the `eventId` property from outside of Unomi,
 Using an authorized 3rd party. This way whenever an event with the same `itemId` will be processed once again he wont be appended to list of events, but will be updated.
 
-Here is an example of a request contains the `itemdId`
+Here is an example of a request that contains the `itemId`
 
 [source]
 ----

@@ -33,17 +33,15 @@ Apache Unomi 3.0 requires **Java 17 or later**. This is a breaking change from p
 
 Apache Unomi 3.0 supports the following search engine versions:
 
-- **Elasticsearch**: Version 9.x (upgraded from 7.17.5)
-- **OpenSearch**: Version 3.x (new support)
-
-NOTE: OpenSearch support is introduced in Apache Unomi 4.0. If you plan to use OpenSearch, first migrate to 3.0 and then follow the 3.0 → 4.0 migration guide.
+- **Elasticsearch**: **9.1.3**, the pin shipped in Unomi 3.0.0, 3.0.1, and 3.1.0. The 2.x line (2.0.0 through 2.7.0) pins **7.4.2**. Unomi 4.0.0 moves the tested pin to **9.4.3**; the persistence service accepts 9.0.3 or later.
+- **OpenSearch**: not part of Unomi 3.0, 3.0.1, or 3.1.0. OpenSearch **3.7.0** is new in Unomi 4.0. Migrate to 3.x on Elasticsearch first, then follow <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>> if you want OpenSearch.
 
 ===== Karaf Version Upgrade
 
 Apache Unomi 3.0 includes an upgrade of the underlying Karaf framework:
 
-- **Previous Version**: Karaf 4.2.15
-- **New Version**: Karaf 4.4.11
+- **Previous Version**: Karaf 4.2.15 (Unomi 2.x)
+- **New Version**: Karaf 4.4.8 (Unomi 3.0.0 through 3.1.0). Unomi 4.0.0 moves this pin to 4.4.12.
 
 This upgrade brings improved stability and support for the latest dependencies.
 
@@ -275,7 +273,7 @@ Before upgrading to Apache Unomi 3.0, complete the following checklist:
 ===== Pre-Migration Requirements
 
 - [ ] **Java 17+**: Ensure Java 17 or later is installed and configured
-- [ ] **Search Engine**: Upgrade Elasticsearch to version 9.x
+- [ ] **Search Engine**: Upgrade Elasticsearch from 7.4.2 to **9.1.3** (the pin shipped in Unomi 3.0.0 through 3.1.0). Unomi 4.0.0 tests **9.4.3**.
 - [ ] **Backup**: Create a complete backup of your current Apache Unomi 2.x installation and data
 - [ ] **Test Environment**: Test the migration in a non-production environment first
 

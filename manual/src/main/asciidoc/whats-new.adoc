@@ -14,7 +14,9 @@
 [#_whats_new_4_0]
 === What's new in Apache Unomi 4.0
 
-Apache Unomi 4.0 builds on the 3.0 platform (Elasticsearch 9 client, Karaf 4.4, Java 17) with operator-focused features for multi-tenant production deployments.
+Apache Unomi 4.0 keeps the runtime that shipped in Unomi 3.0 and continued through 3.1.0 (Java 17, Karaf 4.4, the Elasticsearch 9 Java API client, and persistence-based clustering) and adds operator-focused features for multi-tenant production deployments.
+
+Unomi 4.0.0 moves the pins on that runtime from Karaf 4.4.8 and Elasticsearch 9.1.3 to **Karaf 4.4.12** and **Elasticsearch 9.4.3**. OpenSearch **3.7.0** is new in 4.0. The Elasticsearch persistence service still accepts 9.0.3 or later; 9.4.3 is the tested pin.
 
 ==== Multi-tenancy and API keys
 
@@ -88,9 +90,48 @@ Invalid parameters are rejected before they reach runtime evaluation.
 * <<_condition_validation,Condition validation>>
 * <<_debugging_conditions,Debugging conditions>>
 
+[#_whats_new_3_1]
+=== What's new in Apache Unomi 3.1
+
+Apache Unomi 3.1 changes the configuration of GraphQL subscriptions, of the scripting allow list, and of the `matchesRegex` operator.
+The runtime pins stay those of Unomi 3.0: Java 17, Karaf 4.4.8, and Elasticsearch 9.1.3. There is no OpenSearch module.
+Read this section before you upgrade from Apache Unomi 3.0.
+
+==== GraphQL subscription credentials
+
+A GraphQL subscription over WebSocket uses the same Basic credentials as the GraphQL HTTP endpoint.
+A client sends the credentials in one of two ways:
+
+* In the `Authorization` header of the WebSocket upgrade request.
+* In the `Authorization` key of the `connection_init` payload. A browser client uses this way, because the browser WebSocket API cannot set request headers.
+
+The GraphiQL console sends the `Authorization` header of its "Headers" tab in the `connection_init` payload.
+Update a subscription client that does not send credentials before you upgrade.
+
+==== Scripting allow list
+
+The default value of `org.apache.unomi.scripting.allow` in `etc/custom.system.properties` no longer contains `org.mvel2.*`.
+If your installation sets `org.apache.unomi.scripting.allow` or the `UNOMI_ALLOW_SCRIPTING_CLASSES` environment variable, remove `org.mvel2.*` from your value.
+
+==== Configuration of the matchesRegex operator
+
+The `matchesRegex` condition operator has new limits on the length of the pattern and on the length of the tested value.
+When a limit is reached, the condition evaluates to `false` and Unomi writes a warning to the log.
+These system properties set the limits:
+
+[options="header"]
+|===
+|Property |Default value
+|`org.apache.unomi.conditions.regex.maxPatternLength` |`512`
+|`org.apache.unomi.conditions.regex.maxInputLength` |`10000`
+|`org.apache.unomi.conditions.regex.maxCharAccesses` |`1000000`
+|===
+
+If a rule or a segment uses a longer pattern or tests a longer value, raise the matching limit.
+
 === What's new in Apache Unomi 3.0
 
-Apache Unomi 3.0 is a major platform release. It upgrades the search-engine client, the OSGi runtime, and the minimum Java version.
+Apache Unomi 3.0 is a major platform release. It upgrades the search-engine client, the OSGi runtime, and the minimum Java version. Unomi 3.0.1 and 3.1.0 keep this runtime.
 
 ==== Java 17
 
@@ -98,11 +139,11 @@ Unomi 3.0 requires **Java 17** or later. Java 11 is no longer supported.
 
 ==== Karaf 4.4
 
-Karaf was upgraded from 4.2.x to **4.4.11** to support current dependencies and Java 17.
+Karaf was upgraded from 4.2.15 to **4.4.8**. Unomi 3.0.0, 3.0.1, and 3.1.0 all ship 4.4.8. Unomi 4.0.0 moves the pin to 4.4.12.
 
 ==== Elasticsearch 9 Java API client
 
-The legacy Elasticsearch REST high-level client was replaced by the official **Elasticsearch 9** Java API client.
+The legacy Elasticsearch REST high-level client was replaced by the official **Elasticsearch 9** Java API client. Unomi 3.0.0 through 3.1.0 pin **Elasticsearch 9.1.3**. Unomi 2.0 through 2.7 pin Elasticsearch 7.4.2. OpenSearch is not part of the 3.x line.
 
 * Client reference: https://www.elastic.co/docs/reference/elasticsearch/clients/java
 * Data migration from Elasticsearch 7: <<_migrate_from_elasticsearch_7_to_elasticsearch_9,Migrate from Elasticsearch 7 to Elasticsearch 9>>

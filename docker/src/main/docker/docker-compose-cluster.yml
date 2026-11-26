@@ -26,6 +26,10 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - cluster.name=contextElasticSearch
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
     networks:
       - unomi-3
     ports:
@@ -34,6 +38,8 @@ services:
   node-1:
     image: apache/unomi:${project.version}
     environment:
+      - UNOMI_AUTO_START=true
+      - UNOMI_DISTRIBUTION=unomi-distribution-elasticsearch
       - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
       - UNOMI_CLUSTER_NODEID=unomi-3-node-1
       - UNOMI_ROOT_PASSWORD=${UNOMI_ROOT_PASSWORD:?Set UNOMI_ROOT_PASSWORD}
@@ -58,6 +64,8 @@ services:
   node-2:
     image: apache/unomi:${project.version}
     environment:
+      - UNOMI_AUTO_START=true
+      - UNOMI_DISTRIBUTION=unomi-distribution-elasticsearch
       - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
       - UNOMI_CLUSTER_NODEID=unomi-3-node-2
       - UNOMI_ROOT_PASSWORD=${UNOMI_ROOT_PASSWORD:?Set UNOMI_ROOT_PASSWORD}

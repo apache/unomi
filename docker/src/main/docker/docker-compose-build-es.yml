@@ -26,6 +26,10 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - cluster.name=contextElasticSearch
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
     networks:
       - unomi-3
     ports:

@@ -78,7 +78,7 @@ Apache Unomi supports both Elasticsearch and OpenSearch as search engine backend
 For Elasticsearch:
 [source]
 ----
-org.apache.unomi.elasticsearch.cluster.name=contextElasticsearch
+org.apache.unomi.elasticsearch.cluster.name=contextElasticSearch
 # The elasticsearch.addresses may be a comma separated list of host names and ports such as
 # hostA:9200,hostB:9200
 # Note: the port number must be repeated for each host.
@@ -536,12 +536,14 @@ curl -X POST "http://localhost:8181/cxs/eventcollector" \
   }'
 ----
 +
-3. GET /client/*
+3. GET /client/myprofile/{format}
++
+The only client operation is `myprofile`. `{format}` is `json`, `yaml`, `csv`, or `text`. The call needs the visitor cookie `context-profile-id`; without it the answer is 404.
 [source,bash]
 ----
-# Example request
-curl -X GET "http://localhost:8181/cxs/client/myapp/status" \
-  -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c"
+curl -X GET "http://localhost:8181/cxs/client/myprofile/json" \
+  -H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+  --cookie "context-profile-id=PROFILE-ID"
 ----
 
 All other endpoints are considered private and require either:
@@ -831,7 +833,7 @@ Apache Unomi allows using different types of expressions in the following subsys
 Apache Unomi uses an integrated scripting language to provide this functionality: MVEL.
 MVEL is used in rule actions as in the following example:
 
-From https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/rules/sessionAssigned.json[https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/rules/sessionAssigned.json]:
+From https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/resources/META-INF/cxs/rules/sessionAssigned.json[https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/resources/META-INF/cxs/rules/sessionAssigned.json]:
 
 [source,json]
 ----
@@ -868,48 +870,33 @@ From https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/mai
 
   "actions": [
     {
-      "parameterValues": {
-        "setPropertyName": "properties.previousVisit",
-        "setPropertyValue": "profileProperty::lastVisit",
-        "storeInSession": false
-      },
-      "type": "setPropertyAction"
+      "parameterValues": {},
+      "type": "evaluateVisitPropertiesAction"
     },
     {
       "parameterValues": {
-        "setPropertyName": "properties.lastVisit",
-        "setPropertyValue": "now",
+        "propertyName": "nbOfVisits",
         "storeInSession": false
       },
-      "type": "setPropertyAction"
+      "type": "incrementPropertyAction"
     },
     {
       "parameterValues": {
-        "setPropertyName": "properties.nbOfVisits",
-        "setPropertyValue": "script::profile.properties.?nbOfVisits != null ? (profile.properties.nbOfVisits + 1) : 1",
+        "propertyName": "totalNbOfVisits",
         "storeInSession": false
       },
-      "type": "setPropertyAction"
-    },
-    {
-      "parameterValues": {
-        "setPropertyName": "properties.totalNbOfVisits",
-        "setPropertyValue": "script::profile.properties.?totalNbOfVisits != null ? (profile.properties.totalNbOfVisits + 1) : 1",
-        "storeInSession": false
-      },
-      "type": "setPropertyAction"
+      "type": "incrementPropertyAction"
     }
   ]
-
 }
 ----
 
-As we see in the above example, we use an MVEL script with the setPropertyAction to set a property value.
-Starting with version 1.5.2, any expression use in rules MUST be allow-listed.
+The built-in session rule updates visit counters with `incrementPropertyAction`. Other rules still set a value with an MVEL expression on `setPropertyAction`.
+Starting with version 1.5.2, any expression used in rules must be allow-listed.
 
 By default, Apache Unomi comes with some built-in allowed expressions that cover all the internal uses cases.
 
-Default allowed MVEL expressions (from https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/expressions/mvel.json[https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/expressions/mvel.json]) :
+Default allowed MVEL expressions (from https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/resources/META-INF/cxs/expressions/mvel.json[https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/resources/META-INF/cxs/expressions/mvel.json]) :
 
 [source,json]
 ----
@@ -1865,13 +1852,14 @@ You can use your custom distribution with:
 # Using environment variable
 UNOMI_DISTRIBUTION=unomi-distribution-opensearch
 
-# Using the setup command
-unomi:setup unomi-distribution-elasticsearch-staging
+# Using the setup command. -d is required; unomi:start does not take a distribution name.
+unomi:setup -d=unomi-distribution-elasticsearch-staging
+unomi:start
 ----
 
 Once you have called the `unomi:setup` command with your desired distribution, you can start Apache Unomi using the `unomi:start` command.
 The setup command only needs to be called once unless you want to change the distribution ; it creates a marker file to remember the chosen distribution.
-In case you want to change it, you can use the `unomi:setup --force` command again with the desired distribution name (using the --force option will override the existing distribution).
+In case you want to change it, call `unomi:setup` again with `-d` and `-f` (for example `unomi:setup -d=unomi-distribution-elasticsearch-staging -f=true`).
 
 ==== Auto-Start
 
@@ -1918,13 +1906,16 @@ For Docker deployments, you can declare a custom distribution feature repository
 
 [source,yaml]
 ----
-version: '3.8'
 services:
   unomi:
     image: apache/unomi:4.0.0
     volumes:
       - ./unomi-custom-distribution-features.xml:/opt/apache-unomi/features/unomi-custom-distribution-features.xml
     environment:
+      - UNOMI_AUTO_START=true
+      - UNOMI_ROOT_PASSWORD=${UNOMI_ROOT_PASSWORD}
+      - UNOMI_HEALTHCHECK_PASSWORD=${UNOMI_HEALTHCHECK_PASSWORD}
+      - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
       - KARAF_FEATURES_REPOSITORIES=file:/opt/apache-unomi/features/unomi-custom-distribution-features.xml
       - UNOMI_DISTRIBUTION=unomi-distribution-custom
     depends_on:
@@ -1986,15 +1977,18 @@ Once you have created and published your custom distribution, you can deploy it 
 **Docker Deployment:**
 [source,yaml]
 ----
-version: '3.8'
 services:
   unomi:
     build:
       context: .
       dockerfile: Dockerfile
     environment:
+      - UNOMI_AUTO_START=true
+      - UNOMI_ROOT_PASSWORD=${UNOMI_ROOT_PASSWORD}
+      - UNOMI_HEALTHCHECK_PASSWORD=${UNOMI_HEALTHCHECK_PASSWORD}
+      - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
       - KARAF_FEATURES_REPOSITORIES=mvn:com.example/your-custom-unomi-distributions/1.0.0/xml/features
-      - UNOMI_DISTRIBUTION=elasticsearch-prod
+      - UNOMI_DISTRIBUTION=unomi-distribution-elasticsearch-prod
     depends_on:
       - elasticsearch
   elasticsearch:
@@ -2022,7 +2016,8 @@ cd apache-unomi-custom-*
 # Start with your custom configuration
 ./bin/karaf start
 ./bin/karaf shell
-unomi:start elasticsearch-prod
+unomi:setup -d=unomi-distribution-elasticsearch-prod
+unomi:start
 ----
 
 [#_health_check]

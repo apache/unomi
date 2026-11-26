@@ -63,8 +63,8 @@ Finally, and although it is technically feasible, we recommend against creating 
 
 ==== Elasticsearch version and capacity
 
-While still using Unomi 1.6, the first step will be to upgrade your Elasticsearch to 7.17.5.
-Documentation is available on https://www.elastic.co/guide/en/elasticsearch/reference/7.17/setup-upgrade.html[Elasticsearch's website].
+While still using Unomi 1.6, the first step will be to upgrade your Elasticsearch to 7.4.2, the version pinned by Unomi 2.0 through 2.7.
+Documentation is available on https://www.elastic.co/guide/en/elasticsearch/reference/7.4/setup-upgrade.html[Elasticsearch's website].
 
 Your Elasticsearch cluster must have enough capacity to handle the migration.
 At a minimum, the required capacity storage capacity must be greater than the size of the dataset in production + the size of the largest index. Any other settings should at least be as big as the source setup (preferably higher).
@@ -98,7 +98,7 @@ Before starting the migration, please ensure that:
  - You do have a backup of your data
  - You did practice the migration in a staging environment, NEVER migrate a production environment without prior validation
  - You verified your applications were operational with Apache Unomi 2.0 (JSON schemas created, client applications updated, ...)
- - You are running Elasticsearch 7.17.5 (or a later 7.x version)
+ - You are running Elasticsearch 7.4.2 (the version pinned by Unomi 2.0 through 2.7)
  - Your Elasticsearch cluster has enough capacity to handle the migration
  - You are currently running Apache Unomi 1.6 (or a later 1.x version)
  - You will be using the same Apache Unomi instance for the entire migration progress. Do not start the migration on one node, and resume an interrupted migration on another node.

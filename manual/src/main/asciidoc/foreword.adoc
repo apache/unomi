@@ -25,4 +25,4 @@ The Apache Unomi community is committed to providing comprehensive, accurate, an
 
 Happy reading!
 
-This edition documents Apache Unomi 4.x, which requires Java 17, Elasticsearch 9.x or OpenSearch 3.x, and tenant API keys for public endpoints.
+This edition documents Apache Unomi 4.0. It keeps the Unomi 3 runtime (Java 17, Karaf 4.4, Elasticsearch 9, persistence-based clustering) and pins Karaf 4.4.12 and Elasticsearch 9.4.3. OpenSearch 3.7.0 is new in 4.0. Public endpoints require tenant API keys.

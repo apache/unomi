@@ -14,13 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-version: '2.4'
-
-# Define networks first
-networks:
-  unomi-net:
-    driver: bridge
-
 services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
@@ -33,6 +26,10 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - cluster.name=contextElasticSearch
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
     networks:
       - unomi-3
     ports:
@@ -59,16 +56,11 @@ services:
       - "${DEBUG_PORT:-5005}:5005"
     networks:
       - unomi-3
-    links:
-      - elasticsearch
     depends_on:
       - elasticsearch
-    networks:
-      unomi-net:
-        aliases:
-          - unomi
 
-volumes: unomi-3-elasticsearch-data:
+volumes:
+  unomi-3-elasticsearch-data:
     driver: local
 
 networks:

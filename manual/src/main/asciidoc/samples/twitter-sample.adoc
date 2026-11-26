@@ -43,7 +43,7 @@ If you are using the packaged version of Unomi (as opposed to deploying it to yo
 
 [source]
 ----
-cp target/tweet-button-plugin-4.0.0-SNAPSHOT.jar ../../package/target/unomi-4.0.0-SNAPSHOT/deploy
+cp target/tweet-button-plugin-4.0.1-SNAPSHOT.jar ../../package/target/unomi-4.0.1-SNAPSHOT/deploy
 ----
 
 ===== Testing the samples
@@ -109,7 +109,7 @@ We will look at the details of the context request and response later.
 
 ==== HTML page
 
-The code for the HTML page with our Tweet button can be found at https://github.com/apache/unomi/blob/master/wab/src/main/webapp/index.html[https://github.com/apache/unomi/blob/master/wab/src/main/webapp/index.html].
+The code for the HTML page with our Tweet button can be found at https://github.com/apache/unomi/blob/master/samples/tweet-button-plugin/src/main/webapp/index.html[https://github.com/apache/unomi/blob/master/samples/tweet-button-plugin/src/main/webapp/index.html].
 
 This HTML page is fairly straightforward: we create a tweet button using the Twitter API while a Javascript script performs the actual logic.
 
@@ -531,7 +531,7 @@ The action executor references the actual implementation of the action as define
         <service-properties>
             <entry key="actionExecutorId" value="incrementTweetNumber"/>
         </service-properties>
-        <bean class="org.apache.unomi.examples.unomi_tweet_button_plugin.actions.IncrementTweetNumberAction">
+        <bean class="org.apache.unomi.samples.tweet_button_plugin.actions.IncrementTweetNumberAction">
             <property name="profileService" ref="profileService"/>
         </bean>
     </service>

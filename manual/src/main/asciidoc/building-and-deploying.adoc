@@ -248,12 +248,16 @@ Apache Unomi 4.x does not embed a search engine. Install Elasticsearch 9.x or Op
 
 2. Uncompress the downloaded package into a directory
 
-3. In the config/elasticsearch.yml file, uncomment and modify the following line:
+3. In the config/elasticsearch.yml file, set:
 
 [source,yaml]
 ----
-cluster.name: contextElasticsearch
+cluster.name: contextElasticSearch
+discovery.type: single-node
+xpack.security.enabled: false
 ----
++
+Elasticsearch 9 enables security and HTTPS unless `xpack.security.enabled` is `false`. Unomi's default client uses HTTP and no credentials, which matches this file. The cluster name matches the value shipped in `custom.system.properties` (`contextElasticSearch`).
 +
 4. Launch the server using:
 
@@ -271,7 +275,6 @@ The recommended way to run OpenSearch is using Docker Compose:
 
 [source,yaml]
 ----
-version: '3.8'
 services:
   opensearch-node1:
     image: opensearchproject/opensearch:3.7.0
@@ -306,7 +309,7 @@ volumes:
 3. Start OpenSearch using:
 [source]
 ----
-docker-compose up
+docker compose up
 ----
 
 ===== Verify Installation
@@ -314,24 +317,28 @@ docker-compose up
 Check that your search engine is up and running by accessing:
 http://localhost:9200[http://localhost:9200]
 
-For OpenSearch with security enabled, you may need to use https and provide the default credentials:
-- Username: admin
-- Password: admin (or the value of OPENSEARCH_INITIAL_ADMIN_PASSWORD if set)
-
-==== Starting Unomi
-
-After your search engine is running, you can start Unomi using the appropriate command:
+OpenSearch keeps security on. Use HTTPS and the password from `OPENSEARCH_INITIAL_ADMIN_PASSWORD` (the compose example above defaults it to `MyStrongPassw0rd!`):
 
 [source]
 ----
-# For Elasticsearch
-unomi:start elasticsearch
-
-# For OpenSearch
-unomi:start opensearch
+curl -k -u admin:${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-MyStrongPassw0rd!} https://localhost:9200
 ----
 
-NOTE: Make sure to specify which start features configuration you're using with the `unomi:start` command. The parameter determines which set of features and bundles are installed and started. Using just `unomi:start` without specifying the configuration is deprecated.
+OpenSearch rejects the password `admin`.
+
+==== Starting Unomi
+
+`unomi:start` takes no distribution argument. Elasticsearch is the default. Select OpenSearch once with `unomi:setup`, then start:
+
+[source]
+----
+# Elasticsearch (default distribution)
+unomi:start
+
+# OpenSearch
+unomi:setup -d=unomi-distribution-opensearch
+unomi:start
+----
 
 ==== Deploying the generated binary package
 
@@ -383,7 +390,7 @@ This is only needed if you didn't use the generated package. Also, this is the p
 environment if you intend to re-deploy the context server KAR iteratively.
 
 Additional requirements:
-* Apache Karaf 4.4.x (Unomi 4.0 ships with 4.4.11), Java 17+ — http://karaf.apache.org[http://karaf.apache.org]
+* Apache Karaf 4.4.x (Unomi 4.0.0 ships with 4.4.12; Unomi 3.0.0 through 3.1.0 shipped 4.4.8), Java 17+ — http://karaf.apache.org[http://karaf.apache.org]
 
 Before deploying, make sure that you have Apache Karaf properly installed. Depending of your usage, you may also have to increase the
  memory size by adjusting the following environment values in the bin/setenv(.bat)
@@ -400,10 +407,11 @@ Install the WAR support and CXF into Karaf by doing the following in the Karaf c
 
 [source]
 ----
-   feature:repo-add cxf-jaxrs 3.6.x (match the CXF version pinned in the Unomi Karaf features)
-   feature:repo-add mvn:org.apache.unomi/unomi-kar/VERSION/xml/features
-   feature:install unomi-kar
+   feature:repo-add mvn:org.apache.unomi/unomi-distribution/VERSION/xml/features
+   feature:install unomi-distribution-elasticsearch
 ----
+
+`VERSION` is the Unomi version you are installing. That feature pulls CXF 3.6.8. For OpenSearch, install `unomi-distribution-opensearch` instead. There is no feature named `unomi-kar`. Create the default tenant before calling `/cxs/cluster`; until that tenant exists the call reports that the admin tenant is missing.
 
 Create a new $MY_KARAF_HOME/etc/org.apache.cxf.osgi.cfg file and put the following property inside :
 
@@ -412,8 +420,7 @@ Create a new $MY_KARAF_HOME/etc/org.apache.cxf.osgi.cfg file and put the followi
    org.apache.cxf.servlet.context=/cxs
 ----
 
-If all went smoothly, you should be able to access the context script here : http://localhost:8181/cxs/cluster[http://localhost:8181/cxs/cluster] .
- You should be able to login as `karaf` with the password you set in `UNOMI_ROOT_PASSWORD` and see basic server information. If not something went wrong during the install.
+If all went smoothly, open http://localhost:8181/cxs/cluster[http://localhost:8181/cxs/cluster] and sign in as `karaf` with the password you set in `UNOMI_ROOT_PASSWORD`. You should see basic server information. If not, something went wrong during the install.
 
 ==== Installing GraphViz for Manual Generation
 
@@ -485,19 +492,18 @@ which will output something like this :
 
 [source]
 ----
-Matching Java Virtual Machines (3):
-    17.0.x, x86_64:	"OpenJDK 17"	/Library/Java/JavaVirtualMachines/openjdk-17.jdk/Contents/Home
-    1.8.0_181, x86_64:	"Java SE 8"	/Library/Java/JavaVirtualMachines/jdk1.8.0_181.jdk/Contents/Home
-    1.7.0_80, x86_64:	"Java SE 7"	/Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home
+Matching Java Virtual Machines (2):
+    21.0.x, arm64:	"OpenJDK 21"	/Library/Java/JavaVirtualMachines/openjdk-21.jdk/Contents/Home
+    17.0.x, arm64:	"OpenJDK 17"	/Library/Java/JavaVirtualMachines/openjdk-17.jdk/Contents/Home
 
-/Library/Java/JavaVirtualMachines/openjdk-11.jdk/Contents/Home
+/Library/Java/JavaVirtualMachines/openjdk-17.jdk/Contents/Home
 ----
 
-You can then select the one you want using :
+Unomi 3.0 and later require Java 17. Select that JDK:
 
 [source]
 ----
-export JAVA_HOME=`/usr/libexec/java_home -v 11.0.5`
+export JAVA_HOME=`/usr/libexec/java_home -v 17`
 ----
 
 and then check that it was correctly referenced using:
@@ -511,9 +517,9 @@ which should give you a result such as this:
 
 [source]
 ----
-openjdk version "11.0.5" 2019-10-15
-OpenJDK Runtime Environment (build 11.0.5+10)
-OpenJDK 64-Bit Server VM (build 11.0.5+10, mixed mode)
+openjdk version "17.0.13" 2024-10-15
+OpenJDK Runtime Environment (build 17.0.13+11)
+OpenJDK 64-Bit Server VM (build 17.0.13+11, mixed mode, sharing)
 ----
 
 ==== Running the integration tests

@@ -94,7 +94,8 @@ If you have a KAR bundle (for example after building from source in the `extensi
 you can follow these steps to install :
 
 . Ensure that Apache Karaf and Apache Unomi are started
-. Execute the following command in karaf: `feature:install unomi-salesforce-connector-karaf-kar`
+. Copy the KAR into Karaf's deploy directory, for example `cp extensions/salesforce-connector/karaf-kar/target/unomi-salesforce-connector-karaf-kar-${project.version}.kar $KARAF_HOME/deploy`
+. Karaf installs the feature `unomi-salesforce-connector-karaf-kar` from that archive
 . The installation is done !
 
 ===== Testing the connector
@@ -161,8 +162,8 @@ ssh -p 8102 karaf@localhost (the password is your configured UNOMI_ROOT_PASSWORD
 [source]
 ----
 feature:repo-refresh
-feature:uninstall unomi-salesforce-connector-karaf-feature
-feature:install unomi-salesforce-connector-karaf-feature
+feature:uninstall unomi-salesforce-connector-karaf-kar
+feature:install unomi-salesforce-connector-karaf-kar
 ----
 +
 . You can then check that the new version is properly deployed by accessing the following URL and checking the build date:

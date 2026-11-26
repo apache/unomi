@@ -30,6 +30,9 @@ if [ "$KARAF_DEBUG" = "true" ]; then
 fi
 
 UNOMI_DISTRIBUTION="${UNOMI_DISTRIBUTION:-unomi-distribution-elasticsearch}"
+# UnomiManagementServiceImpl starts features only when this property is exactly "true".
+# An unset variable must not expand to an empty -Dunomi.autoStart= value.
+UNOMI_AUTO_START="${UNOMI_AUTO_START:-true}"
 export KARAF_OPTS="-Dunomi.autoStart=${UNOMI_AUTO_START} -Dunomi.distribution=${UNOMI_DISTRIBUTION}"
 
 echo "KARAF_OPTS: $KARAF_OPTS"
