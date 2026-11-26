@@ -39,8 +39,16 @@
         <feature>feature</feature>
         <feature>spifly</feature>
         <feature>shell-compat</feature>
-        <feature version="${jackson.version}">jackson</feature>
-        <feature version="${jackson.version}">jackson-jaxrs</feature>
+        <feature>jaxrs</feature>
+        <feature>jakarta.annotation</feature>
+        <!-- Jackson bundles, declared here because no Karaf feature provides this version -->
+        <bundle start-level="35">mvn:com.fasterxml.jackson.core/jackson-core/${jackson.version}</bundle>
+        <bundle start-level="35">mvn:com.fasterxml.jackson.core/jackson-annotations/${jackson-annotations.version}</bundle>
+        <bundle start-level="35">mvn:com.fasterxml.jackson.core/jackson-databind/${jackson.version}</bundle>
+        <bundle start-level="35">mvn:org.yaml/snakeyaml/${snakeyaml.version}</bundle>
+        <bundle start-level="35">mvn:com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/${jackson.version}</bundle>
+        <bundle start-level="35">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-base/${jackson.version}</bundle>
+        <bundle start-level="35">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider/${jackson.version}</bundle>
         <bundle>mvn:commons-collections/commons-collections/${commons-collections.version}</bundle>
         <bundle>mvn:org.apache.commons/commons-lang3/${commons-lang3.version}</bundle>
         <bundle>mvn:commons-beanutils/commons-beanutils/${commons-beanutils.version}</bundle>
