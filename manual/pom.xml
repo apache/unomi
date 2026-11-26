@@ -89,7 +89,8 @@
                                 <linkcss>true</linkcss>
                                 <stylesheet>unomi-manual.css</stylesheet>
                                 <imagesdir>images</imagesdir>
-                                <source-highlighter>highlightjs</source-highlighter>
+                                <source-highlighter>coderay</source-highlighter>
+                                <coderay-css>class</coderay-css>
                                 <revnumber>${project.version}</revnumber>
                                 <project-version>${project.version}</project-version>
                                 <graphvizdot>${graphviz.dot.path}</graphvizdot>
@@ -135,6 +136,27 @@
                 </executions>
                 <configuration>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-manual-fonts</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${doc.output.html}/fonts</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${doc.source}/fonts</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>

@@ -18,7 +18,8 @@
 :toclevels: 4
 :toc-title: Table of contents
 :doctype: article
-:source-highlighter: highlightjs
+:source-highlighter: coderay
+:coderay-css: class
 :sectlinks:
 :sectanchors:
 
