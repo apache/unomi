@@ -39,8 +39,6 @@
         <feature>feature</feature>
         <feature>spifly</feature>
         <feature>shell-compat</feature>
-        <feature version="${jackson.version}">jackson</feature>
-        <feature version="${jackson.version}">jackson-jaxrs</feature>
         <bundle>mvn:commons-collections/commons-collections/${commons-collections.version}</bundle>
         <bundle>mvn:org.apache.commons/commons-lang3/${commons-lang3.version}</bundle>
         <bundle>mvn:commons-beanutils/commons-beanutils/${commons-beanutils.version}</bundle>
@@ -48,7 +46,7 @@
         <bundle>mvn:org.apache.httpcomponents/httpcore-osgi/${httpcore-osgi.version}</bundle>
         <bundle>mvn:org.apache.httpcomponents/httpclient-osgi/${httpclient-osgi.version}</bundle>
         <bundle>mvn:javax.validation/validation-api/${javax-validation.version}</bundle>
-        <!-- Jackson bundles not included in any karaf feature -->
+        <!-- The cxf-jackson feature installs Jackson. These Jackson bundles are in no feature. -->
         <bundle>mvn:com.fasterxml.jackson.datatype/jackson-datatype-jsr310/${jackson.version}</bundle>
         <bundle>mvn:com.fasterxml.jackson.module/jackson-module-jaxb-annotations/${jackson.version}</bundle>
 
